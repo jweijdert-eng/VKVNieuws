@@ -96,16 +96,40 @@
     transform: translateY(-2px);
 }
 
-/* Omslag: het embleem op een verloop, in plaats van per bericht een plaatje
-   te genereren. Vaste verhouding, anders springen de kaarten uit het lood. */
+/* Omslag: het embleem op een gelaagde achtergrond, in plaats van per bericht
+   een plaatje te genereren. Vaste verhouding, anders springen de kaarten uit
+   het lood.
+
+   Hier stond een amberen waas achter het logo. Die las als vuil op het scherm:
+   een zachte vlek zonder vorm, waar het embleem in wegzakte. Nu drie scherpe
+   lagen die je pas ziet als je erop let — een fijne ruit, een schuine glans en
+   een verloop naar donker — zodat het logo er bovenop ligt in plaats van erin. */
 .vkv-app .vkv-omslag {
-    position: relative; aspect-ratio: 16 / 7;
+    position: relative; aspect-ratio: 16 / 7; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(circle at 50% 45%,
-                rgba(240, 192, 64, .16), transparent 62%), #0b0f16;
-    border-bottom: 1px solid rgba(240, 192, 64, .28);
+    background:
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, .022) 0 1px,
+                                  transparent 1px 9px),
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, .022) 0 1px,
+                                  transparent 1px 9px),
+        linear-gradient(112deg, rgba(255, 255, 255, .055) 0%,
+                        rgba(255, 255, 255, 0) 46%),
+        linear-gradient(180deg, #141b28 0%, #0a0e15 100%);
+    border-bottom: 1px solid rgba(240, 192, 64, .3);
 }
-.vkv-app .vkv-omslag img { width: 76px; height: 76px; }
+/* Haarlijn langs de bovenrand: geeft de kaart een randje licht, zoals een
+   opstaand vlak. Een pseudo-element omdat een border de ruit zou opschuiven. */
+.vkv-app .vkv-omslag::before {
+    content: ""; position: absolute; inset: 0 0 auto; height: 1px;
+    background: linear-gradient(90deg, transparent,
+                rgba(255, 255, 255, .16) 22%, rgba(255, 255, 255, .16) 78%,
+                transparent);
+}
+/* Schaduw in plaats van gloed: het embleem staat nu óp de omslag. */
+.vkv-app .vkv-omslag img {
+    width: 76px; height: 76px; position: relative;
+    filter: drop-shadow(0 3px 7px rgba(0, 0, 0, .6));
+}
 .vkv-app .vkv-omslag .vkv-vinkjes { position: absolute; top: .5rem; right: .5rem; }
 
 .vkv-app .vkv-kaart-body { padding: .85rem 1rem .6rem; flex: 1 1 auto; }
@@ -305,7 +329,8 @@
     font-size: .92rem; font-weight: 800; letter-spacing: .02em;
     font-variant-numeric: tabular-nums;
     /* Het oranje van de ring om het embleem, van het logo zelf afgelezen
-       (#fc7701). 7,1:1 op de omslag, dus ruim leesbaar. */
+       (#fc7701). De badge staat onderin, waar de omslag het donkerst is: 7,2:1.
+       Bovenaan zou het 6,4:1 zijn, ook nog ruim boven de eis. */
     color: #fc7701;
 }
 
