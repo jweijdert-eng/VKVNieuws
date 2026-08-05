@@ -59,8 +59,12 @@ daar tegenaan, dan geeft ESI een 520 en is wachten het enige dat helpt.
 
 ## Installeren
 
+Deze plugin staat **niet op PyPI**; installeren gaat rechtstreeks vanaf de
+[releases](https://github.com/jweijdert-eng/VKVNieuws/releases). Vervang het
+versienummer door de nieuwste:
+
 ```bash
-pip install aa-vkvnieuws
+pip install https://github.com/jweijdert-eng/VKVNieuws/releases/download/v1.6.0/aa_vkvnieuws-1.6.0-py3-none-any.whl
 ```
 
 In `local.py`:
@@ -79,6 +83,25 @@ python manage.py collectstatic --noinput
 **Die tweede regel is niet optioneel.** Het embleem dat in de plugin meekomt
 staat bij de statische bestanden; zonder `collectstatic` krijg je op elke kaart
 een gebroken plaatje.
+
+## Bijwerken
+
+Zelfde commando met het nieuwe versienummer, en dan het belangrijkste: **de
+server herstarten**. Een draaiende gunicorn houdt de oude code vast, dus een
+nieuwe instelling verschijnt niet in de admin zolang dat niet gebeurd is.
+
+```bash
+pip install --upgrade --force-reinstall <wheel-url van de nieuwste release>
+python manage.py migrate
+python manage.py collectstatic --noinput
+sudo systemctl restart allianceauth        # of: supervisorctl restart all
+```
+
+Welke versie er nu draait, zie je met:
+
+```bash
+python -c "import vkvnieuws; print(vkvnieuws.__version__)"
+```
 
 ### Een eigen logo
 
