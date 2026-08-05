@@ -72,10 +72,11 @@ STAART = ".,;:!?)»\"'"
 PILOOT_TYPE = 1377
 
 # EVE zet zelf géén kleur om een pilotenlink (14 stuks in de inbox, allemaal
-# kaal). Deze is dus zelfgekozen: magenta ligt op ruime afstand van de amber van
-# systemen, het geel van adressen én de teal van gewone tekst, en haalt 7,1:1 op
-# de donkere mailachtergrond.
-PILOOTKLEUR = "#fff078d8"
+# kaal). Deze is dus zelfgekozen. Alles wat de nieuwsbrief al gebruikt is warm —
+# amber voor systemen, geel voor adressen, oranje voor de ondertekening — dus is
+# de koele kant vrij. Lichtblauw haalt 9,4:1 op de donkere mailachtergrond en
+# ligt met 29 het verst van die warme kleuren af.
+PILOOTKLEUR = "#ff5cc8ff"
 
 _enkel = None            # namen van één woord: naam -> (type, id)
 _meerwoord = None        # namen met spaties: één regex, langste eerst

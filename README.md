@@ -157,19 +157,20 @@ te zoeken. Jouw eigen lijsten staan daarom als hulptekst bij het id-veld.
 ## Pilotennamen klikbaar
 
 Schrijf `MC'SAKE` of `milly frensic` in je bericht en het wordt in de mail een
-link naar dat karakter, in magenta:
+link naar dat karakter, in lichtblauw:
 
 ```html
-<font color="#fff078d8"><a href="showinfo:1377//686304948">MC'SAKE</a></font>
+<font color="#ff5cc8ff"><a href="showinfo:1377//686304948">MC'SAKE</a></font>
 ```
 
 Het typenummer hoort eigenlijk bij de bloedlijn (1374 t/m 1386 komen alle voor in
 echte mails), maar de client trekt zich er niets van aan: dezelfde piloot staat
 in de ene mail als `1375` en in de andere als `1377`. Het id doet het werk.
 
-De kleur is zelfgekozen — EVE zet er zelf geen omheen — en wel magenta omdat die
-op ruime afstand ligt van de amber van systemen, het geel van adressen én de teal
-van gewone tekst, met 7,1:1 contrast op de donkere mailachtergrond.
+De kleur is zelfgekozen, want EVE zet er zelf geen omheen. Alles wat een
+nieuwsbrief al gebruikt is warm — amber voor systemen, geel voor adressen, oranje
+voor de ondertekening — dus is de koele kant vrij. Lichtblauw haalt 9,4:1 op de
+donkere mailachtergrond en ligt het verst van die warme kleuren af.
 
 ### Waarom een lijst en niet gewoon opzoeken
 
