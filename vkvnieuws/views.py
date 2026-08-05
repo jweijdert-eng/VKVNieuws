@@ -187,6 +187,13 @@ def _stuur_discord(request, bericht):
     adres = request.build_absolute_uri(bericht.get_absolute_url())
     logo = instellingen.logo_pad()
 
+    # Alleen de eerste keer aantikken. Stuur je een bericht nog eens — na een
+    # correctie bijvoorbeeld — dan maak je daar niet de hele server voor wakker.
+    al_geweest = bericht.verzendingen.filter(
+        kanaal=Verzending.Kanaal.DISCORD, gelukt=True).exists()
+    vermelding = ("" if al_geweest
+                  else discord.vermelding_tekst(instellingen.discord_vermelding))
+
     def teken(maker, *args):
         """Tekenen mag nooit het verzenden tegenhouden."""
         try:
@@ -207,7 +214,8 @@ def _stuur_discord(request, bericht):
             discord.voorbeeld(bericht.onderwerp, bericht.inleiding,
                               omslag=plaat, url=adres,
                               auteur=bericht.auteur_weergave,
-                              oproep=str(_("Lees de hele nieuwsbrief →")))
+                              oproep=str(_("Lees de hele nieuwsbrief →")),
+                              vermelding=vermelding)
             Verzending.objects.create(
                 bericht=bericht, kanaal=Verzending.Kanaal.DISCORD, gelukt=True,
                 toelichting="voorbeeldkaart")
@@ -219,7 +227,8 @@ def _stuur_discord(request, bericht):
             plaat = teken(plaatje.maak, bericht.tekst_met_ondertekening,
                           bericht.onderwerp)
         discord.post(bericht.onderwerp, bericht.platte_tekst,
-                     auteur=bericht.auteur_weergave, url=adres, afbeelding=plaat)
+                     auteur=bericht.auteur_weergave, url=adres, afbeelding=plaat,
+                     vermelding=vermelding)
     except discord.DiscordFout as fout:
         Verzending.objects.create(bericht=bericht, kanaal=Verzending.Kanaal.DISCORD,
                                   gelukt=False, toelichting=str(fout))

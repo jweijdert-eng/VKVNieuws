@@ -1,4 +1,4 @@
-"""Discord-webhook — Blog.
+"""Discord-webhook — VKV Nieuws.
 
 Een webhook en niet de bot: er is geen extra dienst voor nodig, hij werkt ook
 als de Discord-service in AA niet ingericht is, en de URL zet je gewoon in de
@@ -86,7 +86,34 @@ def _stukken(tekst, grens=MAX_BERICHT):
     return uit
 
 
-def voorbeeld(onderwerp, inleiding, omslag=None, url="", auteur="", oproep=""):
+def vermelding_tekst(soort):
+    """`@everyone` of `@here`, of niets.
+
+    Let op: in een embed doet zo'n vermelding **niets** — Discord tikt alleen
+    aan wat in de gewone berichttekst staat. Vandaar dat hij hieronder altijd in
+    `content` belandt en niet in de kaart.
+    """
+    from vkvnieuws.models import Instellingen
+
+    return {Instellingen.Vermelding.EVERYONE: "@everyone",
+            Instellingen.Vermelding.HERE: "@here"}.get(soort, "")
+
+
+def _mag_aantikken(inhoud):
+    """Discord alleen laten aantikken als we daar zelf om vragen.
+
+    Zonder dit zou een `@everyone` die iemand middenin zijn nieuwsbrief typt
+    ook de hele server wakker maken.
+    """
+    if inhoud.startswith("@everyone"):
+        return {"parse": ["everyone"]}
+    if inhoud.startswith("@here"):
+        return {"parse": ["everyone"]}     # @here valt onder dezelfde sleutel
+    return {"parse": []}
+
+
+def voorbeeld(onderwerp, inleiding, omslag=None, url="", auteur="", oproep="",
+              vermelding=""):
     """Een aankondiging als kaart: titel, de eerste zinnen en een omslagplaat.
 
     Wél een embed hier. Bij een lap tekst oogt zo'n kaart benauwd, maar met een
@@ -108,22 +135,30 @@ def voorbeeld(onderwerp, inleiding, omslag=None, url="", auteur="", oproep=""):
     if omslag:
         embed["image"] = {"url": f"attachment://{BESTANDSNAAM}"}
 
-    _verstuur_embed(haak, embed, omslag)
-    logger.info("Blog: voorbeeldkaart op Discord gezet — %s", onderwerp)
+    _verstuur_embed(haak, embed, omslag, vermelding)
+    logger.info("VKV Nieuws: voorbeeldkaart op Discord gezet — %s", onderwerp)
     return True
 
 
-def _verstuur_embed(haak, embed, afbeelding=None):
-    """Eén kaart naar de webhook, eventueel met een afbeelding erin."""
+def _verstuur_embed(haak, embed, afbeelding=None, vermelding=""):
+    """Eén kaart naar de webhook, eventueel met een afbeelding erin.
+
+    De vermelding gaat als gewone berichttekst boven de kaart: in een embed
+    tikt Discord niemand aan.
+    """
+    lading = {"embeds": [embed]}
+    if vermelding:
+        lading["content"] = vermelding
+        lading["allowed_mentions"] = _mag_aantikken(vermelding)
     try:
         if afbeelding:
             r = requests.post(
                 haak, timeout=40, params={"wait": "true"},
-                data={"payload_json": json.dumps({"embeds": [embed]})},
+                data={"payload_json": json.dumps(lading)},
                 files={"files[0]": (BESTANDSNAAM, afbeelding, "image/png")})
         else:
-            r = requests.post(haak, json={"embeds": [embed]},
-                              timeout=20, params={"wait": "true"})
+            r = requests.post(haak, json=lading, timeout=20,
+                              params={"wait": "true"})
     except requests.RequestException as exc:
         raise DiscordFout(f"Discord niet bereikbaar: {exc}") from exc
     _controleer(r)
@@ -140,7 +175,7 @@ def _haak():
     return haak
 
 
-def post(onderwerp, tekst, auteur="", url="", afbeelding=None):
+def post(onderwerp, tekst, auteur="", url="", afbeelding=None, vermelding=""):
     """Zet het bericht op Discord als gewone berichten.
 
     Geen embed: dat zet alles in een kaart met een streep ernaast, en een
@@ -153,7 +188,9 @@ def post(onderwerp, tekst, auteur="", url="", afbeelding=None):
     """
     haak = _haak()
 
-    kop = f"## {_kort(onderwerp, MAX_TITEL)}"
+    # De vermelding op een eigen regel bovenaan, vóór de kop.
+    kop = f"{vermelding}\n" if vermelding else ""
+    kop += f"## {_kort(onderwerp, MAX_TITEL)}"
     if url:
         # Punthaken eromheen: anders plakt Discord er een linkvoorbeeld onder,
         # en dan staat er alsnog een kaart in beeld.
@@ -178,22 +215,23 @@ def post(onderwerp, tekst, auteur="", url="", afbeelding=None):
         laatste = nummer == len(stukken)
         _verstuur(haak, stuk, afbeelding if (laatste and afbeelding) else None)
 
-    logger.info("Blog: op Discord gezet in %s bericht(en) — %s",
+    logger.info("VKV Nieuws: op Discord gezet in %s bericht(en) — %s",
                 len(stukken), onderwerp)
     return True
 
 
 def _verstuur(haak, inhoud, afbeelding=None):
     """Eén bericht naar de webhook."""
+    lading = {"content": inhoud, "allowed_mentions": _mag_aantikken(inhoud)}
     try:
         if afbeelding:
             r = requests.post(
                 haak, timeout=40, params={"wait": "true"},
-                data={"payload_json": json.dumps({"content": inhoud})},
+                data={"payload_json": json.dumps(lading)},
                 files={"files[0]": (BESTANDSNAAM, afbeelding, "image/png")})
         else:
-            r = requests.post(haak, json={"content": inhoud},
-                              timeout=20, params={"wait": "true"})
+            r = requests.post(haak, json=lading, timeout=20,
+                              params={"wait": "true"})
     except requests.RequestException as exc:
         raise DiscordFout(f"Discord niet bereikbaar: {exc}") from exc
     _controleer(r)

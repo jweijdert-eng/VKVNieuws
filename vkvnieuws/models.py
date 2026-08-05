@@ -77,6 +77,17 @@ class Instellingen(models.Model):
                     "adres in in plaats van te uploaden. Handig als de "
                     "mediamap van de server niet publiek is — dan blijft een "
                     "upload namelijk een gebroken plaatje."))
+    class Vermelding(models.TextChoices):
+        GEEN = "geen", _("Niemand aantikken")
+        EVERYONE = "everyone", _("@everyone")
+        HERE = "here", _("@here — alleen wie online is")
+
+    discord_vermelding = models.CharField(
+        max_length=10, choices=Vermelding.choices, default=Vermelding.EVERYONE,
+        verbose_name=_("Wie aantikken op Discord"),
+        help_text=_("Komt op een eigen regel boven de nieuwsbrief. Alleen bij "
+                    "de eerste keer dat een bericht op Discord komt — stuur je "
+                    "hem nog eens, dan blijft de melding uit."))
     discord_stijl = models.CharField(
         max_length=20, choices=DiscordStijl.choices,
         default=DiscordStijl.VOORBEELD,

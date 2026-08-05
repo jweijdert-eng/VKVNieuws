@@ -107,6 +107,26 @@ plugin terug op `VKVNIEUWS_DISCORD_WEBHOOK` in `local.py`, zodat een bestaande
 installatie niets merkt van het bijwerken. Zijn ze allebei leeg, dan staat
 Discord gewoon uit en blijft EVE-mail werken.
 
+### @everyone erbij
+
+Onder **Wie aantikken op Discord** kies je `@everyone`, `@here` of niemand. De
+vermelding komt op een **eigen regel** boven de nieuwsbrief.
+
+Twee dingen die daarbij van belang zijn:
+
+- **In een embed tikt Discord niemand aan.** Een vermelding werkt alleen in de
+  gewone berichttekst, dus bij de voorbeeldkaart staat hij bóven de kaart en niet
+  erin. Zonder dat zou je een `@everyone` zien staan waar niemand een melding van
+  krijgt.
+- **Alleen de eerste keer.** Stuur je een bericht nog eens — na een correctie
+  bijvoorbeeld — dan blijft de melding uit. Je maakt de server niet twee keer
+  wakker voor dezelfde nieuwsbrief.
+
+Typt iemand `@everyone` middenín zijn nieuwsbrief, dan tikt dat niemand aan: elk
+bericht gaat met `allowed_mentions` de deur uit en alleen een vermelding die de
+plugin er zelf bovenop zet telt mee. Het testbericht uit de instellingen tikt
+ook niemand aan.
+
 ### Tekst en een gekleurde afbeelding
 
 De tekst komt altijd in de embed. Daaronder gaat optioneel een **afbeelding** mee
