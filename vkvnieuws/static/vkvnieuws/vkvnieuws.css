@@ -294,6 +294,13 @@
     content: attr(data-leeg); color: var(--vkv-dim);
 }
 .vkv-app .vkv-bewerkvlak a { pointer-events: none; }
+/* Ingesprongen keuze die bij het vinkje erboven hoort, zoals de vermelding
+   onder Discord. De streep links maakt zichtbaar dat het één geheel is. */
+.vkv-app .vkv-keuze-in {
+    margin-left: 1.5rem; padding-left: .7rem;
+    border-left: 2px solid var(--vkv-border);
+}
+.vkv-app .vkv-keuze-in .vkv-dim { font-size: .78rem; }
 /* Losse keuze buiten het verzendblok, bv. het vinkje voor systeemlinks. */
 .vkv-app .vkv-keuze-los { align-items: flex-start; margin: 1rem 0 .2rem; }
 .vkv-app .vkv-keuze-los .vkv-dim { font-size: .78rem; }

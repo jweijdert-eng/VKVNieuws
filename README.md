@@ -141,9 +141,11 @@ Twee dingen die daarbij van belang zijn:
   gewone berichttekst, dus bij de voorbeeldkaart staat hij bóven de kaart en niet
   erin. Zonder dat zou je een `@everyone` zien staan waar niemand een melding van
   krijgt.
-- **Alleen de eerste keer.** Stuur je een bericht nog eens — na een correctie
-  bijvoorbeeld — dan blijft de melding uit. Je maakt de server niet twee keer
-  wakker voor dezelfde nieuwsbrief.
+- **Een vinkje op het verzendscherm beslist**, niet een regel die je niet ziet.
+  Het staat standaard aan zolang een bericht nog niet op Discord heeft gestaan,
+  dus bij een nieuwe nieuwsbrief hoef je er niets voor te doen. Heeft het er al
+  gestaan, dan staat het vinkje uit — je maakt de server niet twee keer wakker
+  voor dezelfde nieuwsbrief, tenzij je dat expres aanvinkt.
 
 Typt iemand `@everyone` middenín zijn nieuwsbrief, dan tikt dat niemand aan: elk
 bericht gaat met `allowed_mentions` de deur uit en alleen een vermelding die de

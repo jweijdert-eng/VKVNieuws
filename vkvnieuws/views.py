@@ -65,9 +65,19 @@ def lijst(request: WSGIRequest) -> HttpResponse:
 @permission_required("vkvnieuws.basic_access")
 def detail(request: WSGIRequest, pk: int) -> HttpResponse:
     """Eén bericht met z'n verzendgeschiedenis."""
+    from vkvnieuws.models import Instellingen
+
     ctx = _basis()
-    ctx["bericht"] = get_object_or_404(
+    bericht = get_object_or_404(
         Bericht.objects.prefetch_related("verzendingen", "ontvangers"), pk=pk)
+    ctx["bericht"] = bericht
+    # Voor het vinkje op het verzendscherm: wát er komt te staan, en of dit
+    # bericht al eens op Discord heeft gestaan — dan staat het vinkje uit.
+    ctx["vermelding"] = discord.vermelding_tekst(
+        Instellingen.haal().discord_vermelding)
+    ctx["al_op_discord"] = any(
+        v.kanaal == Verzending.Kanaal.DISCORD and v.gelukt
+        for v in bericht.verzendingen.all())
     return render(request, "vkvnieuws/detail.html", ctx)
 
 
@@ -187,12 +197,11 @@ def _stuur_discord(request, bericht):
     adres = request.build_absolute_uri(bericht.get_absolute_url())
     logo = instellingen.logo_pad()
 
-    # Alleen de eerste keer aantikken. Stuur je een bericht nog eens — na een
-    # correctie bijvoorbeeld — dan maak je daar niet de hele server voor wakker.
-    al_geweest = bericht.verzendingen.filter(
-        kanaal=Verzending.Kanaal.DISCORD, gelukt=True).exists()
-    vermelding = ("" if al_geweest
-                  else discord.vermelding_tekst(instellingen.discord_vermelding))
+    # Het vinkje op het verzendscherm beslist. Dat staat standaard aan zolang het
+    # bericht nog niet op Discord heeft gestaan, dus bij een nieuwe nieuwsbrief
+    # hoef je er niets voor te doen — maar je ziet wél dat het gaat gebeuren.
+    vermelding = (discord.vermelding_tekst(instellingen.discord_vermelding)
+                  if request.POST.get("vermelding") else "")
 
     def teken(maker, *args):
         """Tekenen mag nooit het verzenden tegenhouden."""

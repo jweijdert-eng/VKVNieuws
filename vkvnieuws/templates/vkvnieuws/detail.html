@@ -62,6 +62,29 @@
                 </span>
             </label>
 
+            {% comment %}
+                Hier zat eerst een onzichtbare regel: alleen aantikken bij de
+                eerste verzending. Dat werkt averechts — je ziet niet waaróm er
+                geen melding komt, en bij het testen lijkt de hele functie stuk.
+                Nu een vinkje dat je gewoon ziet staan, standaard aan zolang het
+                bericht nog niet op Discord heeft gestaan.
+            {% endcomment %}
+            {% if kan_discord and vermelding %}
+                <label class="vkv-keuze vkv-keuze-in">
+                    <input type="checkbox" name="vermelding" value="1"
+                           {% if not al_op_discord %}checked{% endif %}>
+                    <span><b>{{ vermelding }}</b>
+                        <span class="vkv-dim">—
+                            {% if al_op_discord %}
+                                {% translate "dit bericht heeft al op Discord gestaan; aanvinken tikt iedereen nogmaals aan" %}
+                            {% else %}
+                                {% translate "zet een melding op een eigen regel boven de nieuwsbrief" %}
+                            {% endif %}
+                        </span>
+                    </span>
+                </label>
+            {% endif %}
+
             <div class="vkv-knoppenrij">
                 <button type="submit" class="vkv-knop vkv-knop-hoofd"
                         {% if not kan_mailen and not kan_discord %}disabled{% endif %}>
