@@ -102,59 +102,22 @@
             {% blocktranslate %}Een mail aan een corporatie komt bij alle leden binnen. De afzender is altijd het gekoppelde character — EVE kent geen corp-afzender.{% endblocktranslate %}
         </div>
 
-        {{ ontvangers.management_form }}
         {% comment %}
-            Fouten in deze rijen werden nergens getoond: dan sloeg het bericht
-            wel op maar de ontvanger niet, zonder dat je zag waarom.
+            Losse ontvangers stonden hier als bewerkbare tabel, maar dat is
+            dubbelop: het adresboek hierboven komt al uit de admin, en daar
+            hangen ze ook aan het bericht zelf. Wat er buiten het adresboek om
+            aan hangt tonen we wél — anders zou een ontvanger onzichtbaar
+            meeliften en zou je hem nergens meer terugvinden.
         {% endcomment %}
-        {% if ontvangers.non_form_errors %}
-            <div class="vkv-melding vkv-melding-error">
-                {% for f in ontvangers.non_form_errors %}<div>{{ f }}</div>{% endfor %}
-            </div>
-        {% endif %}
-        {% for f in ontvangers %}
-            {% if f.errors %}
-                <div class="vkv-melding vkv-melding-error">
-                    {% for veld, fouten in f.errors.items %}
-                        {% for fout in fouten %}<div>{{ fout }}</div>{% endfor %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endfor %}
-        <div class="vkv-tablewrap">
-            <table class="vkv-table">
-                <thead>
-                    <tr>
-                        <th>{% translate "Soort" %}</th>
-                        <th>{% translate "Naam" %}</th>
-                        <th>{% translate "EVE-id" %}</th>
-                        <th>{% translate "Weg" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for f in ontvangers %}
-                        <tr>
-                            {{ f.id }}
-                            <td>{{ f.soort }}</td>
-                            <td>{{ f.naam }}</td>
-                            <td>{{ f.eve_id }}</td>
-                            <td class="vkv-midden">{{ f.DELETE }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% if mailinglijsten %}
-            <div class="vkv-hint">
-                {% translate "Jouw mailinglijsten:" %}
-                {% for id, naam in mailinglijsten %}
-                    <b>{{ naam }}</b> ({{ id }}){% if not forloop.last %} · {% endif %}
+        {% if losse_ontvangers %}
+            <div class="vkv-hint vkv-hint-los">
+                {% translate "Gaat daarnaast naar:" %}
+                {% for o in losse_ontvangers %}
+                    <b>{{ o.naam }}</b>{% if not forloop.last %} · {% endif %}
                 {% endfor %}
+                — {% blocktranslate %}losse ontvangers, te beheren in de admin onder VKV Nieuws → berichten.{% endblocktranslate %}
             </div>
         {% endif %}
-        <div class="vkv-hint">
-            {% blocktranslate %}Eén regel per ontvanger; opslaan geeft er weer een lege rij bij. Je hoeft maar één van de twee in te vullen: bij een naam zoekt de plugin het id erbij, bij een id de naam. Dan zie je meteen of het de juiste is. Alleen voor een mailinglijst is het id nodig.{% endblocktranslate %}
-        </div>
 
         <div class="vkv-knoppenrij">
             <button type="submit" class="vkv-knop vkv-knop-hoofd">

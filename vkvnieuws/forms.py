@@ -101,7 +101,11 @@ class BerichtForm(forms.ModelForm):
 
 
 class OntvangerForm(forms.ModelForm):
-    """Naam óf id invullen is genoeg; EVE zoekt de rest erbij."""
+    """Naam óf id invullen is genoeg; EVE zoekt de rest erbij.
+
+    Wordt gebruikt door de inline in het beheerscherm. Losse ontvangers stonden
+    ook in het schrijfscherm, maar dat waren twee plekken voor hetzelfde.
+    """
 
     class Meta:
         model = Ontvanger
@@ -171,5 +175,3 @@ class OntvangerForm(forms.ModelForm):
         return gegevens
 
 
-OntvangerFormSet = forms.inlineformset_factory(
-    Bericht, Ontvanger, form=OntvangerForm, extra=1, can_delete=True)

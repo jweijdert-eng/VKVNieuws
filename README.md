@@ -140,6 +140,20 @@ De namen komen uit django-eveuniverse, dat de sterrenkaart lokaal heeft staan;
 er is geen ESI-call voor nodig. Reken op ongeveer 66 tekens per link van je
 8.000.
 
+## Ontvangers
+
+Op één plek: in de admin. In het schrijfscherm vink je aan wie deze mail krijgt,
+uit je adresboek onder *VKV Nieuws → vaste ontvangers*; een eenmalige ontvanger
+zet je erbij op het bericht zelf, onder *VKV Nieuws → berichten*.
+
+Naam óf id invullen is genoeg — de plugin zoekt de ander erbij en laat zien wie
+het is. Het id wint: vul je een nummer in, dan worden naam én soort overschreven
+met wat EVE terugmeldt. Zo kwam boven water dat `137318884` geen piloot was maar
+een killmail-nummer.
+
+Voor een **mailinglijst** is het id verplicht; die namen zijn nergens publiek op
+te zoeken. Jouw eigen lijsten staan daarom als hulptekst bij het id-veld.
+
 ## Pilotennamen klikbaar
 
 Schrijf `MC'SAKE` of `milly frensic` in je bericht en het wordt in de mail een

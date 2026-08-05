@@ -273,9 +273,15 @@
 /* Losse keuze buiten het verzendblok, bv. het vinkje voor systeemlinks. */
 .vkv-app .vkv-keuze-los { align-items: flex-start; margin: 1rem 0 .2rem; }
 .vkv-app .vkv-keuze-los .vkv-dim { font-size: .78rem; }
+/* De kleur van een link komt uit de tekst zelf: piloten magenta, systemen
+   amber, adressen geel. Zonder dit wint de linkkleur van het thema en staat er
+   op het scherm iets anders dan je straks verstuurt — alles goud in de
+   leesweergave, alles cyaan in de editor. */
+.vkv-app .vkv-tekst a,
+.vkv-app .vkv-bewerkvlak a { color: inherit; }
 /* In-game links zijn geen webadressen; dat mag je zien. */
 .vkv-app .vkv-tekst a[href^="showinfo:"] {
-    color: var(--vkv-gold); border-bottom: 1px dotted currentColor; cursor: help;
+    border-bottom: 1px dotted currentColor; cursor: help;
 }
 /* Adresboek-vinkjes: naast elkaar in plaats van een lange kolom. */
 .vkv-app .vkv-vinkjes-lijst {

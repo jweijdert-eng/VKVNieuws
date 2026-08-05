@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 from esi.decorators import token_required
 
 from vkvnieuws import discord, esi, plaatje
-from vkvnieuws.forms import BerichtForm, OntvangerFormSet
+from vkvnieuws.forms import BerichtForm
 from vkvnieuws.models import (LETTERGROOTTES, MAX_ZICHTBAAR, Bericht, Ontvanger,
                          StandaardOntvanger, Verzending)
 
@@ -74,37 +74,39 @@ def schrijven(request: WSGIRequest, pk: int = None) -> HttpResponse:
 
     if request.method == "POST":
         form = BerichtForm(request.POST, instance=bericht)
-        # Het formset heeft een opgeslagen bericht nodig om aan te hangen, dus
-        # eerst het bericht bewaren en daarna pas de ontvangers. In één
-        # transactie, want anders blijft er bij een afgekeurde ontvanger een
-        # bericht zonder ontvangers achter dat niemand besteld heeft.
         if form.is_valid():
+            # In één transactie, want de ontvangers hangen aan een bericht dat
+            # er eerst moet zijn: gaat het tweede deel mis, dan blijft er anders
+            # een bericht zonder ontvangers achter dat niemand besteld heeft.
             with transaction.atomic():
                 nieuw = form.save(commit=False)
                 if not nieuw.auteur_id:
                     nieuw.auteur = request.user
                 nieuw.save()
-                ontvangers = OntvangerFormSet(request.POST, instance=nieuw)
-                if ontvangers.is_valid():
-                    ontvangers.save()
-                    _vaste_ontvangers(nieuw, form.cleaned_data.get("vaste_ontvangers"))
-                    messages.success(request, _("Bericht opgeslagen."))
-                    return redirect("vkvnieuws:detail", pk=nieuw.pk)
-                transaction.set_rollback(True)
-        else:
-            ontvangers = OntvangerFormSet(request.POST, instance=bericht)
+                _vaste_ontvangers(nieuw, form.cleaned_data.get("vaste_ontvangers"))
+            messages.success(request, _("Bericht opgeslagen."))
+            return redirect("vkvnieuws:detail", pk=nieuw.pk)
     else:
         form = BerichtForm(instance=bericht)
-        ontvangers = OntvangerFormSet(instance=bericht)
 
-    # Mailinglijsten erbij: het id daarvan is nergens publiek op te zoeken, dus
-    # zonder dit lijstje moet je zo'n nummer ergens vandaan zien te toveren.
-    ids = esi.character_ids(request.user)
     ctx = _basis()
-    ctx.update({"form": form, "ontvangers": ontvangers, "bericht": bericht,
+    ctx.update({"form": form, "bericht": bericht,
                 "groottes": LETTERGROOTTES, "max_zichtbaar": MAX_ZICHTBAAR,
-                "mailinglijsten": esi.mailinglijsten(ids)})
+                "losse_ontvangers": _losse_ontvangers(bericht)})
     return render(request, "vkvnieuws/schrijven.html", ctx)
+
+
+def _losse_ontvangers(bericht):
+    """Ontvangers die niet uit het adresboek komen.
+
+    Die zijn hier niet te bewerken — dat doe je in de admin — maar wel te zien,
+    anders zou zo iemand ongemerkt meegaan met elke volgende verzending.
+    """
+    if not bericht:
+        return []
+    adresboek = set(StandaardOntvanger.objects.values_list("soort", "eve_id"))
+    return [o for o in bericht.ontvangers.all()
+            if (o.soort, o.eve_id) not in adresboek]
 
 
 def _vaste_ontvangers(bericht, gekozen):

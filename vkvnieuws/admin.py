@@ -8,13 +8,51 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from vkvnieuws import discord, esi, links, opmaak
+from vkvnieuws.forms import OntvangerForm
 from vkvnieuws.models import (Auteur, Bericht, Instellingen, Ontvanger, Piloot,
                          StandaardOntvanger, Verzending)
 
 
 class OntvangerInline(admin.TabularInline):
+    """Wie deze mail krijgt.
+
+    Draait op hetzelfde formulier als vroeger in het schrijfscherm stond: naam
+    óf id invullen is genoeg, de ander wordt erbij gezocht en meteen nagekeken.
+    Dat scherm had het ook, en twee plekken voor hetzelfde is er één te veel.
+    """
+
     model = Ontvanger
+    form = OntvangerForm
     extra = 1
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        # Een mailinglijst-id is nergens publiek op te zoeken; zonder dit
+        # lijstje moet je zo'n nummer maar ergens vandaan zien te toveren.
+        # Op het formulier en niet op de inline zelf: die laatste is gedeeld
+        # tussen alle verzoeken, dus dan zou jouw lijstje bij een ander opduiken.
+        lijsten = _mijn_mailinglijsten(request.user)
+        if lijsten:
+            formset.form.base_fields["eve_id"].help_text = _(
+                "Alleen nodig voor een mailinglijst. Die van jou: %(lijst)s"
+            ) % {"lijst": ", ".join(f"{naam} ({pk})" for pk, naam in lijsten)}
+        return formset
+
+
+def _mijn_mailinglijsten(user):
+    """De mailinglijsten van deze gebruiker, een uur lang onthouden.
+
+    Het kost één ESI-call per character, en dat wil je niet bij elke keer dat
+    iemand een bericht openslaat.
+    """
+    from django.core.cache import cache
+
+    sleutel = f"vkvnieuws:mailinglijsten:{user.pk}"
+    uit = cache.get(sleutel)
+    if uit is None:
+        uit = esi.mailinglijsten(esi.character_ids(user))
+        cache.set(sleutel, uit, 3600)
+    return uit
 
 
 class VerzendingInline(admin.TabularInline):
