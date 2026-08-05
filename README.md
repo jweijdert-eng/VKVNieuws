@@ -140,6 +140,37 @@ De namen komen uit django-eveuniverse, dat de sterrenkaart lokaal heeft staan;
 er is geen ESI-call voor nodig. Reken op ongeveer 66 tekens per link van je
 8.000.
 
+## Webadressen klikbaar
+
+Altijd aan, en zonder vinkje: bij een systeemnaam valt te twisten of je *Van*
+bedoelt of het systeem Van, maar `janice.e-351.com` is nooit iets anders dan een
+adres. Typ het gewoon in de tekst en het wordt in de mail:
+
+```html
+<font color="#ffffe400"><loc><a href="https://janice.e-351.com">janice.e-351.com</a></loc></font>
+```
+
+Geel dus, en niet de amber van een systeemlink — precies zoals EVE het zelf doet
+in de vier mails uit de inbox waar dit uit is afgelezen. De `<loc>` eromheen
+hoort erbij; zonder blijft het adres in de client gewone tekst. Staat er geen
+`http://` of `https://` voor, dan zet de plugin er `https://` bij, want anders
+wil de client er niets mee.
+
+Wat er *niet* uit mag komen, en waarom het niet gebeurt:
+
+| In de tekst | Wordt het een link? | Waarom |
+|---|---|---|
+| `junkinyourtrunk.insidiousevil.org/app/` | ja | pad mag erbij |
+| `Fleet om 20:00.De rest volgt` | nee | uitgangen zijn hoofdlettergevoelig, `De` telt niet |
+| `versie 1.2.nl` | nee | vóór de uitgang moet minstens één letter staan |
+| `naam@corp.com` | nee | een e-mailadres is geen webadres |
+| `dutchlegions.nl.` | ja, zonder de punt | leestekens aan het eind horen bij de zin |
+
+Alleen bekende uitgangen tellen (`com`, `nl`, `org`, `eu`, `gg`, `app` en zo'n
+dertig andere); zonder die lijst wordt elke afkorting met een punt erin een link.
+Tekst die al in een `<a>` staat blijft met rust, dus opnieuw opslaan levert geen
+link in een link op.
+
 ## Rechten
 
 | Recht | Wat het mag |

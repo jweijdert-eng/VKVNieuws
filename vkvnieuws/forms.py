@@ -1,4 +1,4 @@
-"""Formulieren — Blog."""
+"""Formulieren — VKV Nieuws."""
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
@@ -60,9 +60,11 @@ class BerichtForm(forms.ModelForm):
         tekst = gegevens.get("tekst")
         if tekst is None:
             return gegevens
-        gegevens["tekst"] = (links.link_systemen(tekst)
-                             if gegevens.get("link_systemen")
-                             else links.haal_links_weg(tekst))
+        tekst = (links.link_systemen(tekst) if gegevens.get("link_systemen")
+                 else links.haal_links_weg(tekst))
+        # Webadressen altijd: een kaal adres in een mail is voor niemand handig,
+        # en anders dan bij systeemnamen valt hier niets te gokken.
+        gegevens["tekst"] = links.link_adressen(tekst)
         return gegevens
 
     def clean_tekst(self):

@@ -1,4 +1,6 @@
-"""Systeem- en regionamen klikbaar maken — Blog.
+"""Links in de tekst — VKV Nieuws.
+
+Systeemnamen, regionamen en webadressen klikbaar maken.
 
 EVE-mail kent in-game links: `<a href="showinfo:5//30000142">Jita</a>` opent het
 infovenster van dat systeem, `showinfo:3//10000058` dat van een region. Type 5 is
@@ -38,6 +40,29 @@ UITZONDERINGEN = {
 # Een naam zoals EVE ze schrijft: letters en cijfers, eventueel met streepjes.
 TOKEN = re.compile(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 TAG = re.compile(r"(<[^>]+>)")
+
+# ── Webadressen ──────────────────────────────────────────────────────────
+# Hoe EVE zelf een webadres in een mail zet, afgelezen uit vier echte mails:
+#     <font color="#ffffe400"><loc><a href="…">tekst</a></loc></font>
+# Geel dus, en niet de amber van een systeemlink — dat scheelt een kleur.
+ADRESKLEUR = "#ffffe400"
+
+# Alleen deze uitgangen tellen als webadres. Zonder zo'n lijst wordt "20:00.De"
+# of een afkorting met een punt erin ook een link.
+TLDS = ("com|org|net|eu|nl|be|de|uk|io|gg|app|dev|info|online|xyz|space|"
+        "tv|me|co|nu|fr|it|es|se|no|fi|dk|pl|cz|ru|us|ca|au|nz|jp|cn|gov|edu")
+
+# Met opzet hoofdlettergevoelig: anders leest "om 20:00.De rest volgt" als het
+# domein "00.De" en wordt het midden in een zin een link.
+ADRES = re.compile(
+    r"(?<![\w@/.])("
+    r"https?://[^\s<>\"']+"                      # met protocol ervoor
+    r"|(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+(?:%s)"   # kale domeinnaam
+    r"(?::\d+)?(?:/[^\s<>\"']*)?"
+    r")" % TLDS)
+
+# Leestekens aan het eind horen bij de zin, niet bij het adres.
+STAART = ".,;:!?)»\"'"
 
 _enkel = None            # namen van één woord: naam -> (type, id)
 _meerwoord = None        # namen met spaties: één regex, langste eerst
@@ -110,6 +135,54 @@ def _zet_links(tekst):
     return "".join(stukken)
 
 
+def _zet_adressen(tekst):
+    """Kale webadressen in een stukje tekst omzetten naar links."""
+
+    def vervang(m):
+        adres = m.group(1)
+        # Leestekens die bij de zin horen buiten de link laten.
+        staart = ""
+        while adres and adres[-1] in STAART:
+            staart = adres[-1] + staart
+            adres = adres[:-1]
+        if not adres:
+            return m.group(0)
+        # De naam vóór de uitgang moet minstens één letter hebben; anders zou
+        # "20:00.nl" of een versienummer ook als adres gelden.
+        gastheer = re.sub(r"^https?://", "", adres, flags=re.I).split("/")[0]
+        if not re.search(r"[A-Za-z]", gastheer.rsplit(".", 1)[0]):
+            return m.group(0)
+        # Zonder protocol is het geen geldig adres voor de mailclient.
+        doel = adres if adres.lower().startswith(("http://", "https://")) else f"https://{adres}"
+        return (f'<font color="{ADRESKLEUR}"><loc>'
+                f'<a href="{doel}">{adres}</a></loc></font>{staart}')
+
+    return ADRES.sub(vervang, tekst)
+
+
+def link_adressen(html):
+    """Webadressen in de tekst klikbaar maken.
+
+    Zelfde aanpak als bij de systeemnamen: tekst die al in een `<a>` staat blijft
+    met rust, anders krijg je een link in een link zodra je nog eens opslaat.
+    """
+    if not html:
+        return ""
+    uit, in_link = [], 0
+    for deel in TAG.split(html):
+        if deel.startswith("<") and deel.endswith(">"):
+            soort = deel[1:].lstrip("/").split(" ")[0].split(">")[0].lower()
+            if soort == "a":
+                in_link += -1 if deel.startswith("</") else 1
+                in_link = max(0, in_link)
+            uit.append(deel)
+        elif in_link:
+            uit.append(deel)
+        else:
+            uit.append(_zet_adressen(deel))
+    return "".join(uit)
+
+
 def link_systemen(html):
     """Systeem- en regionamen omzetten naar in-game links.
 
@@ -137,7 +210,6 @@ def link_systemen(html):
 LOSHALEN = re.compile(
     r'(?i)(?:<font color="%s">)?<a href="showinfo:(?:%d|%d)//\d+">([^<]*)</a>(?:</font>)?'
     % (re.escape(LINKKLEUR), SYSTEEM_TYPE, REGION_TYPE))
-
 
 def haal_links_weg(html):
     """De links er weer af, als je het vinkje uitzet."""
