@@ -179,6 +179,54 @@ def schoon(html):
     return re.sub(r"(?:<br>\s*){4,}", "<br><br><br>", uit).strip()
 
 
+# EVE kent naast <font> ook de Unity-schrijfwijze, die je in bio's en
+# omschrijvingen tegenkomt. In echte mails staat hij niet, maar wie markup van
+# elders plakt heeft 'm zo te pakken — dus vertalen we hem in plaats van hem weg
+# te gooien. Anders verdween de kleur zonder dat je zag waarom.
+UNITY_KLEUR = re.compile(r"(?i)<\s*color\s*=\s*(?:0x|#)?([0-9a-f]{6,8})\s*>")
+UNITY_KLEUR_EIND = re.compile(r"(?i)<\s*/\s*color\s*>")
+UNITY_GROOTTE = re.compile(r"(?i)<\s*fontsize\s*=\s*(\d{1,2})\s*>")
+UNITY_GROOTTE_EIND = re.compile(r"(?i)<\s*/\s*fontsize\s*>")
+
+# Een regeleinde dat tegen een tag aan ligt is inspringing, geen lege regel.
+# Twee gevallen, want tekst kan aan beide kanten staan:
+#     <font ...>\n  Fly o7\n</font>   ->   <font ...>Fly o7</font>
+# Een regeleinde tússen twee stukken tekst blijft wél een regelovergang; anders
+# zou je in de bronweergave geen alinea meer kunnen typen.
+NA_TAG = re.compile(r"(?<=>)[ \t]*\n[ \t\n]*")
+VOOR_TAG = re.compile(r"[ \t]*\n[ \t\n]*(?=<)")
+
+
+def uit_bron(bron):
+    """Ruwe EVE-markup uit de bronweergave omzetten naar wat we bewaren.
+
+    Twee dingen die anders misgaan bij geplakte markup:
+
+    1. **Inspringing wordt geen lege regel.** Zet je de tags onder elkaar met
+       spaties ervoor — zoals in elk voorbeeld op internet — dan zou elke
+       regelovergang een `<br>` worden en staat je mail vol gaten. Een
+       regeleinde dat alleen maar tússen twee tags staat gooien we dus weg;
+       een regeleinde middenin tekst blijft gewoon een regelovergang.
+    2. **De Unity-schrijfwijze wordt vertaald** naar `<font>`, in plaats van
+       eruit gegooid.
+    """
+    if not bron:
+        return ""
+    bron = bron.replace("\r\n", "\n").replace("\r", "\n")
+    bron = UNITY_KLEUR.sub(lambda m: f'<font color="{_unity_kleur(m.group(1))}">', bron)
+    bron = UNITY_KLEUR_EIND.sub("</font>", bron)
+    bron = UNITY_GROOTTE.sub(r'<font size="\1">', bron)
+    bron = UNITY_GROOTTE_EIND.sub("</font>", bron)
+    bron = NA_TAG.sub("", bron)
+    bron = VOOR_TAG.sub("", bron)
+    return schoon(bron)
+
+
+def _unity_kleur(hex_waarde):
+    """`0xffffa600` of `ffa600` -> `#ffffa600`."""
+    return _kleur("#" + hex_waarde) or "#ffffffff"
+
+
 def van_platte_tekst(tekst):
     """Oude berichten zonder opmaak alsnog netjes tonen."""
     return escape(tekst or "", quote=False).replace("\n", "<br>")

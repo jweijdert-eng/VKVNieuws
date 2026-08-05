@@ -35,13 +35,22 @@
     var teller = document.querySelector('#vkv-teller');
     var GRENS = parseInt(balk.dataset.grens || '8000', 10);
 
+    // In bronweergave is het tekstvak zelf waar je in typt; dan mag `tel` er
+    // niet overheen schrijven met de inhoud van het bewerkvlak.
+    var inBron = false;
+
     function tel() {
-        var n = (vlak.innerText || '').replace(/\n/g, '').length;
+        var n;
+        if (inBron) {
+            n = vak.value.replace(/<[^>]*>/g, '').replace(/\s/g, '').length;
+        } else {
+            n = (vlak.innerText || '').replace(/\n/g, '').length;
+            vak.value = vlak.innerHTML;
+        }
         if (teller) {
             teller.textContent = n + '/' + GRENS;
             teller.classList.toggle('vkv-teveel', n > GRENS);
         }
-        vak.value = vlak.innerHTML;
     }
 
     /* ── Selectie onthouden ──────────────────────────────────────────────── */
@@ -170,10 +179,74 @@
     }
 
     // Plakken als platte tekst: anders komt de halve opmaak van een website mee
-    // en gooit de opschoner dat er straks toch weer uit.
+    // en gooit de opschoner dat er straks toch weer uit. Wil je wél markup
+    // plakken, dan is daar de bronweergave voor.
     vlak.addEventListener('paste', function (e) {
         e.preventDefault();
         var tekst = (e.clipboardData || window.clipboardData).getData('text');
         document.execCommand('insertText', false, tekst);
     });
+
+    /* ── Bronweergave ────────────────────────────────────────────────────────
+       Het omzetten gebeurt aan de serverkant. Dat is één netwerkrondje per klik,
+       maar het alternatief is de hele opschoner nóg een keer in JavaScript
+       naschrijven — en dan heb je twee versies die na de eerste wijziging al uit
+       elkaar lopen. */
+    var bronknop = balk.querySelector('[data-doe="bron"]');
+    var bronvlag = document.querySelector('#vkv-bronmodus');
+    var form = vak.closest('form');
+
+    function csrf() {
+        var el = form && form.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    function omzetten(tekst, naar) {
+        return fetch(balk.dataset.bronurl, {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+            body: JSON.stringify({tekst: tekst, naar: naar})
+        }).then(function (r) {
+            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+            return r.json();
+        }).then(function (a) { return a.tekst; });
+    }
+
+    function zetBron(aan) {
+        inBron = aan;
+        vlak.style.display = aan ? 'none' : '';
+        vak.style.display = aan ? '' : 'none';
+        vak.classList.toggle('vkv-bronvlak', aan);
+        if (bronvlag) { bronvlag.value = aan ? '1' : ''; }
+        if (bronknop) { bronknop.setAttribute('aria-pressed', aan ? 'true' : 'false'); }
+        // De opmaakknoppen doen niets op ruwe tekst; grijs ze uit in plaats van
+        // ze te laten klikken zonder gevolg.
+        [].forEach.call(balk.querySelectorAll('.vkv-balkknop, .vkv-balkkeuze, .vkv-kleurknop'),
+            function (el) {
+                if (el === bronknop) { return; }
+                el.classList.toggle('vkv-balk-uit', aan);
+                if ('disabled' in el) { el.disabled = aan; }
+            });
+        tel();
+    }
+
+    if (bronknop && balk.dataset.bronurl) {
+        bronknop.addEventListener('click', function () {
+            bronknop.disabled = true;
+            if (!inBron) {
+                omzetten(vlak.innerHTML, 'bron').then(function (t) {
+                    vak.value = t; zetBron(true);
+                }).catch(function () {
+                    window.alert(balk.dataset.bronfout || 'Omzetten mislukte.');
+                }).then(function () { bronknop.disabled = false; });
+            } else {
+                omzetten(vak.value, 'editor').then(function (t) {
+                    vlak.innerHTML = t; zetBron(false);
+                }).catch(function () {
+                    window.alert(balk.dataset.bronfout || 'Omzetten mislukte.');
+                }).then(function () { bronknop.disabled = false; });
+            }
+        });
+        vak.addEventListener('input', function () { if (inBron) { tel(); } });
+    }
 })();

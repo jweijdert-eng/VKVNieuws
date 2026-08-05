@@ -1,4 +1,4 @@
-"""App-URLs — Blog."""
+"""App-URLs — VKV Nieuws."""
 
 from django.urls import path
 
@@ -14,4 +14,5 @@ urlpatterns = [
     path("<int:pk>/verzenden/", views.verzenden, name="verzenden"),
     path("<int:pk>/verwijderen/", views.verwijderen, name="verwijderen"),
     path("koppelen/", views.koppelen, name="koppelen"),
+    path("bron/", views.bron, name="bron"),
 ]

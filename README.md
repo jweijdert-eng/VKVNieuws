@@ -57,6 +57,49 @@ nieuwsbrief scripts in Alliance Auth belanden.
 Er zit ook een limiet op hóéveel mail je per tijdseenheid mag sturen. Loop je
 daar tegenaan, dan geeft ESI een 520 en is wachten het enige dat helpt.
 
+### Markup plakken: de knop `</>`
+
+Gewoon plakken blijft platte tekst — anders komt de halve opmaak van een website
+mee die de opschoner er toch weer uitgooit. Heb je EVE-markup die je erin wilt
+zetten, dan is daar de knop **`</>`** in de opmaakbalk voor: die laat de bron
+zien zoals hij in de mail komt, en daar mag je in plakken en typen.
+
+Wat er wordt aangenomen:
+
+| | |
+|---|---|
+| `<b>` `<i>` `<u>` `<br>` `<br/>` | blijven staan |
+| `<font size="12" color="#ffffa600">` | blijft staan |
+| `<a href="…">` | http(s) en EVE-schema's (`showinfo:`, `contract:`, …) |
+| `<color=0xffffa600>` en `<fontsize=12>` | worden omgezet naar `<font>` |
+| `<table>`, `<div>`, `<h1>`, `<script>` … | eruit; de tekst blijft |
+
+Die laatste twee rijen zijn het vermelden waard. De **Unity-schrijfwijze**
+(`<color=0x…>`, `<fontsize=…>`) kom je tegen in bio's en omschrijvingen; in echte
+mails staat hij niet, maar wie markup van elders plakt heeft hem zo te pakken —
+dus vertalen we hem in plaats van hem weg te gooien. En **EVE kent maar zeven
+tags**, dus HTML van een website met tabellen, koppen of lijsten wordt hoe dan
+ook platgeslagen.
+
+**Inspringing wordt geen lege regel.** Zet je de tags onder elkaar, zoals in elk
+voorbeeld op internet:
+
+```html
+<font size="12" color="#ffb2b2b2">
+  Fly dangerously o7
+</font>
+```
+
+dan zou elke regelovergang een `<br>` worden en stond je mail vol gaten. Een
+regeleinde dat tegen een tag aan ligt telt daarom als inspringing. Een
+regeleinde tússen twee stukken tekst blijft wél een regelovergang, zodat je in de
+bronweergave gewoon alinea's kunt typen.
+
+Het omzetten heen en weer gebeurt aan de serverkant, via `POST /vkvnieuws/bron/`.
+Dat is één netwerkrondje per klik, maar het alternatief is de hele opschoner nóg
+een keer in JavaScript naschrijven — en dan heb je twee versies die na de eerste
+wijziging al uit elkaar lopen.
+
 ## Installeren
 
 Deze plugin staat **niet op PyPI**; installeren gaat rechtstreeks vanaf de

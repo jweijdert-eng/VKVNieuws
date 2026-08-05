@@ -30,8 +30,10 @@
             en dan werkt het formulier nog steeds.
         {% endcomment %}
         {% translate "Adres (https://… of showinfo:…)" as linkvraag %}
+        {% translate "Omzetten lukte niet. Staat de server nog?" as bronfout %}
         <div class="vkv-balk" id="vkv-balk" hidden
-             data-grens="{{ max_zichtbaar }}" data-linkvraag="{{ linkvraag }}">
+             data-grens="{{ max_zichtbaar }}" data-linkvraag="{{ linkvraag }}"
+             data-bronurl="{% url 'vkvnieuws:bron' %}" data-bronfout="{{ bronfout }}">
             <button type="button" class="vkv-balkknop" data-doe="bold"
                     title="{% translate 'Vet' %}"><b>B</b></button>
             <button type="button" class="vkv-balkknop" data-doe="underline"
@@ -51,12 +53,24 @@
                     title="{% translate 'Link toevoegen' %}">url</button>
             <button type="button" class="vkv-balkknop" data-doe="geenlink"
                     title="{% translate 'Link weghalen' %}">✂</button>
+            <span class="vkv-balkscheiding"></span>
+            <button type="button" class="vkv-balkknop vkv-bronknop" data-doe="bron"
+                    aria-pressed="false"
+                    title="{% translate 'Bronweergave: EVE-markup zien en plakken' %}">&lt;/&gt;</button>
             <span class="vkv-teller" id="vkv-teller">0/{{ max_zichtbaar }}</span>
         </div>
 
         {{ form.tekst }}
+        {% comment %}
+            Staat de bronweergave aan bij het opslaan, dan is wat er in het
+            tekstvak staat ruwe markup en geen browser-HTML. Het formulier moet
+            dat weten, anders wordt de inspringing van geplakte tags alsnog een
+            rits lege regels.
+        {% endcomment %}
+        <input type="hidden" name="bronmodus" id="vkv-bronmodus" value="">
+
         <div class="vkv-hint">
-            {% blocktranslate %}De opmaak die EVE-mail kent: vet, onderstreept, schuin, kleur, lettergrootte en links. Plakken gaat als platte tekst, zodat er geen opmaak van een website meekomt.{% endblocktranslate %}
+            {% blocktranslate %}De opmaak die EVE-mail kent: vet, onderstreept, schuin, kleur, lettergrootte en links. Plakken gaat als platte tekst, zodat er geen opmaak van een website meekomt — wil je markup plakken, gebruik dan de knop <b>&lt;/&gt;</b>.{% endblocktranslate %}
         </div>
 
         <label class="vkv-keuze vkv-keuze-los">

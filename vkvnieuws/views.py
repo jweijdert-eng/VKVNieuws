@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 
 from esi.decorators import token_required
 
-from vkvnieuws import discord, esi, plaatje
+from vkvnieuws import discord, esi, opmaak, plaatje
 from vkvnieuws.forms import BerichtForm
 from vkvnieuws.models import (LETTERGROOTTES, MAX_ZICHTBAAR, Bericht, Ontvanger,
                          StandaardOntvanger, Verzending)
@@ -109,6 +109,34 @@ def schrijven(request: WSGIRequest, pk: int = None) -> HttpResponse:
                 "groottes": LETTERGROOTTES, "max_zichtbaar": MAX_ZICHTBAAR,
                 "losse_ontvangers": _losse_ontvangers(bericht)})
     return render(request, "vkvnieuws/schrijven.html", ctx)
+
+
+@login_required
+@permission_required("vkvnieuws.schrijven")
+@require_POST
+def bron(request: WSGIRequest) -> HttpResponse:
+    """Heen en weer tussen de opmaakbalk en de bronweergave.
+
+    Dat gebeurt aan de serverkant en niet in JavaScript, want het omzetten zit al
+    in `opmaak` en dat een tweede keer in de browser naschrijven levert twee
+    versies op die uit elkaar gaan lopen.
+    """
+    import json
+
+    from django.http import JsonResponse
+
+    try:
+        gegevens = json.loads(request.body or b"{}")
+    except ValueError:
+        return JsonResponse({"ok": False}, status=400)
+
+    tekst = gegevens.get("tekst") or ""
+    if gegevens.get("naar") == "bron":
+        # Wat de opmaakbalk maakte tonen zoals het in de mail komt.
+        return JsonResponse({"ok": True, "tekst": opmaak.schoon(tekst)})
+    # Andersom: geplakte markup terug naar iets wat de browser goed tekent.
+    return JsonResponse({"ok": True,
+                         "tekst": opmaak.naar_browser(opmaak.uit_bron(tekst))})
 
 
 def _losse_ontvangers(bericht):

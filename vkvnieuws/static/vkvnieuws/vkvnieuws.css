@@ -294,6 +294,18 @@
     content: attr(data-leeg); color: var(--vkv-dim);
 }
 .vkv-app .vkv-bewerkvlak a { pointer-events: none; }
+/* Bronweergave: hier zie je de markup zoals die in de mail komt, dus
+   monospace en met de regels intact. */
+.vkv-app .vkv-bronvlak {
+    font-family: Consolas, "Cascadia Mono", "DejaVu Sans Mono", monospace;
+    font-size: .82rem; line-height: 1.5; white-space: pre-wrap;
+    border-radius: 0 0 6px 6px;
+}
+/* Knoppen die in bronweergave niets doen. */
+.vkv-app .vkv-balk-uit { opacity: .35; pointer-events: none; }
+.vkv-app .vkv-bronknop[aria-pressed="true"] {
+    background: rgba(240, 192, 64, .18); color: var(--vkv-gold);
+}
 /* Ingesprongen keuze die bij het vinkje erboven hoort, zoals de vermelding
    onder Discord. De streep links maakt zichtbaar dat het één geheel is. */
 .vkv-app .vkv-keuze-in {

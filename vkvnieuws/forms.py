@@ -77,7 +77,13 @@ class BerichtForm(forms.ModelForm):
         bevatten, en alleen wat op de lijst staat mag door. Meten gebeurt ná het
         opschonen, want anders keur je iets goed dat straks toch anders is.
         """
-        schoon = opmaak.schoon(self.cleaned_data["tekst"])
+        # Uit de bronweergave komt ruwe EVE-markup; die heeft een eigen route,
+        # want daar is een regeleinde tussen twee tags inspringing en geen lege
+        # regel.
+        if self.data.get("bronmodus"):
+            schoon = opmaak.uit_bron(self.cleaned_data["tekst"])
+        else:
+            schoon = opmaak.schoon(self.cleaned_data["tekst"])
         if not opmaak.naar_tekst(schoon).strip():
             raise forms.ValidationError(_("Een bericht zonder tekst heeft geen zin."))
 
