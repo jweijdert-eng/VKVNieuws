@@ -62,7 +62,8 @@ class StandaardOntvangerAdmin(admin.ModelAdmin):
 
 @admin.register(Bericht)
 class BerichtAdmin(admin.ModelAdmin):
-    list_display = ("onderwerp", "auteur_weergave", "aangemaakt", "is_verzonden")
+    list_display = ("nummer", "onderwerp", "auteur_weergave", "aangemaakt",
+                    "is_verzonden")
     list_filter = ("aangemaakt", "ondertekend_door")
     search_fields = ("onderwerp", "tekst")
     # "Aangemaakt door" vult zichzelf; tonen is nuttig, wijzigen niet.

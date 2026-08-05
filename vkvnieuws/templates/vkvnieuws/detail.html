@@ -4,6 +4,9 @@
 {% block vkv_title %}{{ bericht.onderwerp }}{% endblock %}
 {% block vkv_sub %}
     <span class="vkv-meta">
+        {% if bericht.nummer %}
+            <span class="vkv-editie-plat">#{{ bericht.nummer }}</span>
+        {% endif %}
         <span class="vkv-meta-datum">{{ bericht.aangemaakt|date:"l j F Y" }}</span>
         <span class="vkv-meta-tijd">{{ bericht.aangemaakt|date:"H:i" }}</span>
         {% if bericht.ondertekening_web %}

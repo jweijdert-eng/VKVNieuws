@@ -33,6 +33,10 @@
                     {% endcomment %}
                     <div class="vkv-omslag">
                         <img src="{{ logo_url }}" alt="" loading="lazy">
+                        {% if b.nummer %}
+                            <span class="vkv-editie animate__animated animate__flipInX"
+                                  style="animation-delay: {{ forloop.counter0 }}00ms;">#{{ b.nummer }}</span>
+                        {% endif %}
                         <div class="vkv-vinkjes">
                             {% for k in b.gelukte_kanalen %}
                                 <span class="vkv-vinkje">✓ {{ k }}</span>

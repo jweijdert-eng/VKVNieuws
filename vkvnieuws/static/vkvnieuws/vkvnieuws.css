@@ -282,3 +282,62 @@
     display: flex; flex-wrap: wrap; gap: .2rem 1.2rem; margin-bottom: .2rem;
 }
 .vkv-app .vkv-vinkjes-lijst .vkv-keuze { padding: .2rem 0; }
+
+/* ── Editienummer ─────────────────────────────────────────────────────── */
+/* Onder het embleem op de omslag. De omslag is een flexvak dat het logo
+   centreert, dus de badge staat absoluut gepositioneerd — anders duwt hij het
+   logo omhoog. */
+.vkv-app .vkv-omslag { flex-direction: column; }
+.vkv-app .vkv-editie {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, 46px);
+    padding: .1rem .55rem; border-radius: 999px;
+    font-size: .74rem; font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--vkv-gold); background: rgba(240, 192, 64, .14);
+    border: 1px solid rgba(240, 192, 64, .35);
+}
+
+/* Alleen flipInX uit Animate.css overgenomen, niet de hele bibliotheek: dat is
+   één animatie tegen ruim honderd kilobyte, en een aangepaste build is precies
+   wat animate.style daarvoor aanraadt. */
+.vkv-app .animate__animated {
+    animation-duration: .9s;
+    animation-fill-mode: both;
+}
+@keyframes vkvFlipInX {
+    from {
+        transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, 90deg);
+        animation-timing-function: ease-in;
+        opacity: 0;
+    }
+    40% {
+        transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, -20deg);
+        animation-timing-function: ease-in;
+    }
+    60% {
+        transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, 10deg);
+        opacity: 1;
+    }
+    80% { transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, -5deg); }
+    to  { transform: translate(-50%, 46px) perspective(400px); }
+}
+/* De translate zit in elke stap mee: zonder dat springt de badge tijdens het
+   draaien terug naar het midden van de omslag. */
+.vkv-app .animate__flipInX {
+    backface-visibility: visible !important;
+    animation-name: vkvFlipInX;
+}
+
+/* Wie beweging heeft uitgezet krijgt het nummer gewoon meteen te zien. */
+@media (prefers-reduced-motion: reduce) {
+    .vkv-app .animate__animated { animation: none !important; }
+}
+
+/* Hetzelfde nummer in de kop van een bericht, maar zonder animatie en zonder
+   de absolute plaatsing van de kaart-badge. */
+.vkv-app .vkv-editie-plat {
+    padding: .08rem .5rem; border-radius: 999px;
+    font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--vkv-gold); background: rgba(240, 192, 64, .14);
+    border: 1px solid rgba(240, 192, 64, .35);
+}

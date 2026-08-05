@@ -185,6 +185,11 @@ class StandaardOntvanger(models.Model):
 class Bericht(models.Model):
     """Een blogbericht."""
 
+    nummer = models.PositiveIntegerField(
+        null=True, blank=True, unique=True, verbose_name=_("Editie"),
+        help_text=_("Het nummer van deze editie. Laat leeg bij een nieuw "
+                    "bericht; dan pakt de plugin het eerstvolgende."))
+
     onderwerp = models.CharField(max_length=MAX_ONDERWERP)
     tekst = models.TextField(
         help_text=_("Opgemaakte tekst in de opmaak die EVE-mail kent."))
@@ -216,7 +221,16 @@ class Bericht(models.Model):
         verbose_name_plural = _("berichten")
 
     def __str__(self):
-        return self.onderwerp
+        return f"#{self.nummer} {self.onderwerp}" if self.nummer else self.onderwerp
+
+    def save(self, *args, **kwargs):
+        # Nummer één keer toekennen en daarna laten staan. Niet afleiden uit de
+        # volgorde in de lijst: dan verspringen alle nummers zodra je er eentje
+        # weggooit, en dan klopt #3 in de mail niet meer met #3 op de site.
+        if self.nummer is None:
+            hoogste = Bericht.objects.aggregate(models.Max("nummer"))["nummer__max"]
+            self.nummer = (hoogste or 0) + 1
+        super().save(*args, **kwargs)
 
     @property
     def html(self):
