@@ -26,10 +26,15 @@ def _basis():
     from vkvnieuws.models import Instellingen
 
     afzenders = esi.verzend_tokens()
-    # Een eigen upload wint; anders het embleem dat in de plugin meekomt.
+    # Volgorde: een ingevuld adres wint van een upload, want dat vul je juist in
+    # als de mediamap niet publiek is en de upload dus een gebroken plaatje
+    # oplevert. Staat er niets, dan het embleem dat in de plugin meekomt — dat
+    # vraagt wel dat er ooit `collectstatic` gedraaid is.
     try:
-        eigen = Instellingen.haal().logo
-        logo = eigen.url if eigen else static("vkvnieuws/logo.png")
+        instellingen = Instellingen.haal()
+        logo = (instellingen.logo_url
+                or (instellingen.logo.url if instellingen.logo else "")
+                or static("vkvnieuws/logo.png"))
     except Exception:  # noqa: BLE001 — tabel bestaat nog niet
         logo = static("vkvnieuws/logo.png")
 
@@ -180,8 +185,7 @@ def _stuur_discord(request, bericht):
     instellingen = Instellingen.haal()
     stijl = instellingen.discord_stijl
     adres = request.build_absolute_uri(bericht.get_absolute_url())
-    # Een eigen upload wint; anders het logo dat in de plugin meekomt.
-    logo = instellingen.logo.path if instellingen.logo else None
+    logo = instellingen.logo_pad()
 
     def teken(maker, *args):
         """Tekenen mag nooit het verzenden tegenhouden."""

@@ -68,9 +68,15 @@ class Instellingen(models.Model):
                     "komen. Leeg laten zet Discord uit."))
     logo = models.ImageField(
         upload_to="vkvnieuws/", blank=True, verbose_name=_("Logo"),
-        help_text=_("Komt rechts op de voorbeeldkaart voor Discord. Vierkant "
-                    "werkt het best; een PNG met doorzichtige achtergrond is "
-                    "het mooist."))
+        help_text=_("Komt op de kaarten en op de voorbeeldkaart voor Discord. "
+                    "Vierkant werkt het best; een PNG met doorzichtige "
+                    "achtergrond is het mooist."))
+    logo_url = models.URLField(
+        max_length=500, blank=True, verbose_name=_("Logo-adres"),
+        help_text=_("Staat je logo al ergens op internet, vul dan hier het "
+                    "adres in in plaats van te uploaden. Handig als de "
+                    "mediamap van de server niet publiek is — dan blijft een "
+                    "upload namelijk een gebroken plaatje."))
     discord_stijl = models.CharField(
         max_length=20, choices=DiscordStijl.choices,
         default=DiscordStijl.VOORBEELD,
@@ -97,6 +103,41 @@ class Instellingen(models.Model):
     @classmethod
     def haal(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+    def logo_pad(self):
+        """Een pad op schijf naar het logo, om de Discord-omslag te tekenen.
+
+        Pillow kan geen adres openen, dus een ingevuld logo-adres wordt één keer
+        opgehaald en bewaard. Zelfde volgorde als op de site: adres, upload, en
+        anders het embleem dat in de plugin meekomt. Geeft None als er niets
+        bruikbaars is; de omslag wordt dan zonder embleem getekend.
+        """
+        import hashlib
+        import os
+        import tempfile
+
+        if self.logo_url:
+            naam = hashlib.sha256(self.logo_url.encode()).hexdigest()[:16]
+            pad = os.path.join(tempfile.gettempdir(), f"vkvnieuws-logo-{naam}.img")
+            if not os.path.exists(pad):
+                import requests
+
+                try:
+                    antwoord = requests.get(self.logo_url, timeout=20)
+                    antwoord.raise_for_status()
+                    with open(pad, "wb") as bestand:
+                        bestand.write(antwoord.content)
+                except Exception:  # noqa: BLE001 — dan de volgende bron
+                    pad = None
+            if pad:
+                return pad
+
+        if self.logo:
+            return self.logo.path
+
+        from django.contrib.staticfiles import finders
+
+        return finders.find("vkvnieuws/logo.png")
 
 
 class Auteur(models.Model):

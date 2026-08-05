@@ -76,6 +76,24 @@ python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
+**Die tweede regel is niet optioneel.** Het embleem dat in de plugin meekomt
+staat bij de statische bestanden; zonder `collectstatic` krijg je op elke kaart
+een gebroken plaatje.
+
+### Een eigen logo
+
+In de admin onder **VKV Nieuws → instellingen**, op twee manieren:
+
+- **Logo** — een upload. Werkt alleen als de mediamap van je server publiek
+  bereikbaar is; is dat niet zo, dan blijft het een gebroken plaatje.
+- **Logo-adres** — staat je logo al ergens op internet, vul dan het adres in.
+  Dat omzeilt de mediamap helemaal, en dit veld wint van de upload.
+
+Voor de Discord-omslag moet het logo als bestand op schijf staan, want Pillow
+kan geen adres openen. Een ingevuld adres wordt daarom één keer opgehaald en
+bewaard. Lukt dat niet, dan valt de plugin terug op de upload en anders op het
+meegeleverde embleem.
+
 ## Discord instellen
 
 In de admin onder **VKV Nieuws → instellingen** vul je de webhook-URL van het kanaal
