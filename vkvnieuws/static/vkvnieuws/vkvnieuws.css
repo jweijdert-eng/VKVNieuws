@@ -290,11 +290,17 @@
 .vkv-app .vkv-omslag { flex-direction: column; }
 .vkv-app .vkv-editie {
     position: absolute; left: 50%; top: 50%;
-    transform: translate(-50%, 46px);
-    padding: .1rem .55rem; border-radius: 999px;
-    font-size: .74rem; font-weight: 700; font-variant-numeric: tabular-nums;
-    color: var(--vkv-gold); background: rgba(240, 192, 64, .14);
-    border: 1px solid rgba(240, 192, 64, .35);
+    /* +40 en niet +46: dan houdt de badge 10px van de onderrand en plakt hij
+       niet meer aan de scheidingslijn. Het logo eindigt op +38, dus er blijft
+       net genoeg lucht onder het embleem. */
+    transform: translate(-50%, 40px);
+    /* Zonder pil eromheen: alleen het cijfer. Daarom iets groter en zwaarder,
+       anders valt het weg nu de omlijsting het niet meer draagt. */
+    font-size: .92rem; font-weight: 800; letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+    /* Het oranje van de ring om het embleem, van het logo zelf afgelezen
+       (#fc7701). 7,1:1 op de omslag, dus ruim leesbaar. */
+    color: #fc7701;
 }
 
 /* Alleen flipInX uit Animate.css overgenomen, niet de hele bibliotheek: dat is
@@ -306,20 +312,20 @@
 }
 @keyframes vkvFlipInX {
     from {
-        transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, 90deg);
+        transform: translate(-50%, 40px) perspective(400px) rotate3d(1, 0, 0, 90deg);
         animation-timing-function: ease-in;
         opacity: 0;
     }
     40% {
-        transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, -20deg);
+        transform: translate(-50%, 40px) perspective(400px) rotate3d(1, 0, 0, -20deg);
         animation-timing-function: ease-in;
     }
     60% {
-        transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, 10deg);
+        transform: translate(-50%, 40px) perspective(400px) rotate3d(1, 0, 0, 10deg);
         opacity: 1;
     }
-    80% { transform: translate(-50%, 46px) perspective(400px) rotate3d(1, 0, 0, -5deg); }
-    to  { transform: translate(-50%, 46px) perspective(400px); }
+    80% { transform: translate(-50%, 40px) perspective(400px) rotate3d(1, 0, 0, -5deg); }
+    to  { transform: translate(-50%, 40px) perspective(400px); }
 }
 /* De translate zit in elke stap mee: zonder dat springt de badge tijdens het
    draaien terug naar het midden van de omslag. */
@@ -338,6 +344,6 @@
 .vkv-app .vkv-editie-plat {
     padding: .08rem .5rem; border-radius: 999px;
     font-weight: 700; font-variant-numeric: tabular-nums;
-    color: var(--vkv-gold); background: rgba(240, 192, 64, .14);
-    border: 1px solid rgba(240, 192, 64, .35);
+    color: #fc7701; background: rgba(252, 119, 1, .14);
+    border: 1px solid rgba(252, 119, 1, .45);
 }
