@@ -1,0 +1,411 @@
+"""Modellen — Blog.
+
+Eén bericht, dat je naar twee kanalen kunt sturen: EVE-mail en Discord. Wat er
+verstuurd is wordt per kanaal vastgelegd, zodat je achteraf ziet wat er wél en
+niet aankwam — en zodat je niet per ongeluk twee keer dezelfde mail rondstuurt.
+"""
+
+from django.contrib.auth.models import User
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+# CCP's grenzen op /characters/{id}/mail/.
+#
+# LET OP: de ESI-spec zegt maxLength 10000 voor de body, maar dat klopt niet.
+# De server weigert boven de 8000: "Maximum body length is 8000" (HTTP 400).
+# Dat is dezelfde 8000 als de teller in het mailvenster van de game. Afgaan op de
+# spec kostte hier een mislukte verzending, dus: 8000.
+MAX_ONDERWERP = 1000
+MAX_BODY = 8000
+MAX_ONTVANGERS = 50
+# De teller telt zichtbare tekens; de 8000 hierboven geldt inclusief opmaak.
+MAX_ZICHTBAAR = 8000
+
+LETTERGROOTTES = (10, 11, 12, 13, 14, 16, 18, 20, 24)
+
+
+class Soort(models.TextChoices):
+    """De ontvangersoorten die ESI kent."""
+
+    CORPORATION = "corporation", _("Corporatie")
+    ALLIANCE = "alliance", _("Alliantie")
+    CHARACTER = "character", _("Character")
+    MAILING_LIST = "mailing_list", _("Mailinglijst")
+
+
+class General(models.Model):
+    """Bestaat alleen om de permissies aan op te hangen."""
+
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = (
+            ("basic_access", _("Kan VKV Nieuws lezen")),
+            ("schrijven", _("Kan berichten schrijven en bewerken")),
+            ("verzenden", _("Kan berichten naar EVE-mail en Discord sturen")),
+        )
+
+
+class Instellingen(models.Model):
+    """De instellingen, als één rij in de admin.
+
+    Waarom in de database en niet alleen in local.py: een webhook wisselen hoort
+    geen serverherstart te kosten, en niet iedereen die de blog beheert komt bij
+    het instellingenbestand. De waarde uit local.py blijft werken als terugval,
+    zodat een bestaande installatie niets merkt.
+    """
+
+    class DiscordStijl(models.TextChoices):
+        VOORBEELD = "voorbeeld", _("Voorbeeldkaart met link naar de site")
+        TEKST = "tekst", _("De hele nieuwsbrief als tekst")
+        TEKST_PLAATJE = "tekst_plaatje", _("De hele nieuwsbrief plus een "
+                                           "gekleurde afbeelding")
+
+    discord_webhook = models.URLField(
+        max_length=500, blank=True,
+        verbose_name=_("Discord-webhook"),
+        help_text=_("De webhook-URL van het kanaal waar de berichten in moeten "
+                    "komen. Leeg laten zet Discord uit."))
+    logo = models.ImageField(
+        upload_to="vkvnieuws/", blank=True, verbose_name=_("Logo"),
+        help_text=_("Komt rechts op de voorbeeldkaart voor Discord. Vierkant "
+                    "werkt het best; een PNG met doorzichtige achtergrond is "
+                    "het mooist."))
+    discord_stijl = models.CharField(
+        max_length=20, choices=DiscordStijl.choices,
+        default=DiscordStijl.VOORBEELD,
+        verbose_name=_("Wat er op Discord komt"),
+        help_text=_("Een voorbeeldkaart is een aankondiging: titel, de eerste "
+                    "zinnen en een link naar de site. De hele nieuwsbrief kan "
+                    "ook, maar die wordt opgeknipt — Discord staat maar 2.000 "
+                    "tekens per bericht toe."))
+    bijgewerkt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("instellingen")
+        verbose_name_plural = _("instellingen")
+
+    def __str__(self):
+        return str(_("Instellingen van VKV Nieuws"))
+
+    def save(self, *args, **kwargs):
+        # Altijd dezelfde rij: zo kan er nooit een tweede set instellingen
+        # ontstaan waarvan je je afvraagt welke nou geldt.
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def haal(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+
+class Auteur(models.Model):
+    """Onder welke naam een bericht ondertekend wordt.
+
+    Los van de AA-gebruiker: die heet "admin", en dat wil je niet onder een
+    nieuwsbrief hebben staan. Hier zet je bijvoorbeeld je characternaam of
+    gewoon "Dutch Legions".
+    """
+
+    naam = models.CharField(
+        max_length=255, unique=True, verbose_name=_("Naam"),
+        help_text=_("Bijvoorbeeld je characternaam."))
+    kleur = models.CharField(
+        max_length=7, default="#ffe400", verbose_name=_("Kleur van de naam"),
+        help_text=_("Waarin de naam in de EVE-mail komt te staan."))
+
+    organisatie = models.CharField(
+        max_length=255, blank=True, verbose_name=_("Organisatie"),
+        help_text=_("Komt achter de naam met een streepje ertussen. Mag leeg."))
+    kleur_organisatie = models.CharField(
+        max_length=7, default="#ff8c00", verbose_name=_("Kleur van de organisatie"))
+
+    standaard = models.BooleanField(
+        default=False, verbose_name=_("standaard"),
+        help_text=_("Staat vast voorgeselecteerd bij een nieuw bericht."))
+
+    class Meta:
+        ordering = ("-standaard", "naam")
+        verbose_name = _("auteur")
+        verbose_name_plural = _("auteurs")
+
+    def __str__(self):
+        return f"{self.naam} - {self.organisatie}" if self.organisatie else self.naam
+
+    @property
+    def html(self):
+        """De ondertekening in EVE-opmaak, elk deel in z'n eigen kleur.
+
+        De kleuren staan als #RRGGBB in de database — dat is wat een kleurkiezer
+        in de browser teruggeeft. EVE wil #AARRGGBB met de doorzichtigheid
+        vóóraan, dus daar zetten we ff voor.
+        """
+        def vak(tekst, kleur):
+            kleur = (kleur or "").strip() or "#ffffff"
+            return f'<font color="#ff{kleur.lstrip("#")}">{tekst}</font>'
+
+        uit = vak(self.naam, self.kleur)
+        if self.organisatie:
+            uit += f' - {vak(self.organisatie, self.kleur_organisatie)}'
+        return uit
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Er kan er maar één de standaard zijn; anders is het willekeurig welke
+        # er straks voorgeselecteerd staat.
+        if self.standaard:
+            Auteur.objects.exclude(pk=self.pk).update(standaard=False)
+
+
+class StandaardOntvanger(models.Model):
+    """Adresboek: ontvangers die je vaker gebruikt.
+
+    Zonder dit tik je bij elk bericht dezelfde corp of mailinglijst opnieuw over,
+    en één cijfer verkeerd betekent dat je mail bij een vreemde aankomt.
+    """
+
+    soort = models.CharField(max_length=20, choices=Soort.choices,
+                             default=Soort.CORPORATION)
+    eve_id = models.BigIntegerField()
+    naam = models.CharField(max_length=255)
+    standaard = models.BooleanField(
+        default=False, verbose_name=_("standaard"),
+        help_text=_("Staat aangevinkt bij een nieuw bericht."))
+
+    class Meta:
+        unique_together = ("soort", "eve_id")
+        ordering = ("-standaard", "naam")
+        verbose_name = _("vaste ontvanger")
+        verbose_name_plural = _("vaste ontvangers")
+
+    def __str__(self):
+        return f"{self.naam} ({self.get_soort_display()})"
+
+
+class Bericht(models.Model):
+    """Een blogbericht."""
+
+    onderwerp = models.CharField(max_length=MAX_ONDERWERP)
+    tekst = models.TextField(
+        help_text=_("Opgemaakte tekst in de opmaak die EVE-mail kent."))
+
+    link_systemen = models.BooleanField(
+        default=True, verbose_name=_("Systeemnamen klikbaar maken"),
+        help_text=_("Namen als HB-5L3 worden in de EVE-mail een link naar het "
+                    "systeem."))
+
+    # Twee verschillende dingen, dus ook twee verschillende labels: wie het in
+    # Alliance Auth heeft ingetikt, en welke naam er onder de mail komt. Allebei
+    # "Auteur" noemen leverde twee identieke labels op in het beheerscherm.
+    auteur = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name="vkvberichten", verbose_name=_("Aangemaakt door"),
+        help_text=_("De Alliance Auth-gebruiker die dit bericht schreef. Wordt "
+                    "vanzelf ingevuld."))
+    ondertekend_door = models.ForeignKey(
+        Auteur, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Ondertekend door"),
+        help_text=_("De naam die onder het bericht komt te staan. Leeg laten "
+                    "gebruikt de gebruikersnaam hierboven."))
+    aangemaakt = models.DateTimeField(auto_now_add=True)
+    bijgewerkt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-aangemaakt",)
+        verbose_name = _("bericht")
+        verbose_name_plural = _("berichten")
+
+    def __str__(self):
+        return self.onderwerp
+
+    @property
+    def html(self):
+        """Wat er op het scherm hoort te komen.
+
+        Niet zomaar de opgeslagen tekst: die staat in EVE-opmaak, en die tekent
+        een browser verkeerd. `size="18"` is in HTML de oude schaal van 1 t/m 7
+        (dus reusachtig) en `#ff00a99d` leest een browser als een heel andere
+        kleur. Vandaar de omrekening.
+
+        Veilig om zo te tonen: bij het opslaan is alles langs de opschoner
+        geweest. Oudere berichten van vóór de opmaakbalk zijn platte tekst.
+        """
+        from django.utils.safestring import mark_safe
+
+        from vkvnieuws import opmaak
+
+        # Mét ondertekening, zodat de pagina laat zien wat er echt verstuurd
+        # wordt — anders zie je pas in je inbox dat er een naam onder staat.
+        ruw = self.tekst or ""
+        if "<" not in ruw:
+            # Oud bericht van vóór de opmaakbalk: eerst platte tekst omzetten.
+            ondertekening = self.ondertekening_html
+            ruw = opmaak.van_platte_tekst(ruw)
+            if ondertekening:
+                ruw = f"{ruw}<br><br>{ondertekening}"
+        else:
+            ruw = self.tekst_met_ondertekening
+        return mark_safe(opmaak.naar_browser(ruw))
+
+    @property
+    def ondertekening_web(self):
+        """De ondertekening voor op een webpagina.
+
+        Dezelfde kleuren als onder de mail, maar omgerekend: EVE's `#AARRGGBB`
+        en `<font>` tekent een browser verkeerd.
+        """
+        from django.utils.safestring import mark_safe
+
+        from vkvnieuws import opmaak
+
+        return mark_safe(opmaak.naar_browser(self.ondertekening_html))
+
+    @property
+    def inleiding(self):
+        """De eerste echte zinnen, voor de voorbeeldkaart op Discord.
+
+        Scheidingslijnen en kopjes eruit: die zeggen een lezer niets als
+        aankondiging, en een rij streepjes is als voorproefje ronduit lelijk.
+        """
+        import re
+
+        stukken = []
+        for regel in self.platte_tekst.split("\n"):
+            regel = regel.strip(" *_")
+            if not regel:
+                continue
+            if re.fullmatch(r"[─-╿_=~-]{3,}", regel):
+                continue                    # scheidingslijn
+            if regel == regel.upper() and len(regel) < 60:
+                continue                    # kopje als DE WEEK / NIET DOEN
+            stukken.append(regel)
+            if sum(len(s) for s in stukken) > 260:
+                break
+        return " ".join(stukken)
+
+    @property
+    def platte_tekst(self):
+        """Zonder opmaak — voor Discord en voor het fragment in de lijst."""
+        from vkvnieuws import opmaak
+
+        return opmaak.naar_tekst(self.tekst)
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+
+        return reverse("vkvnieuws:detail", args=[self.pk])
+
+    @property
+    def auteur_weergave(self):
+        """De naam die eronder komt te staan.
+
+        De gekozen auteur wint; anders de AA-gebruikersnaam, want die is er
+        altijd — al is "admin" onder een nieuwsbrief niet mooi.
+        """
+        if self.ondertekend_door:
+            # str(), niet .naam: sinds de auteur uit twee stukken bestaat zou
+            # .naam alleen "CosmicCarrot" geven en de organisatie wegvallen.
+            return str(self.ondertekend_door)
+        return self.auteur.username if self.auteur else ""
+
+    @property
+    def tekst_met_ondertekening(self):
+        """De tekst zoals hij de deur uit gaat, met de naam eronder.
+
+        De ondertekening zit met opzet NIET in het opgeslagen bericht: dan zou er
+        bij elke keer opslaan een regel bij komen. Hij wordt er hier pas
+        aangeplakt, bij het versturen en bij het tonen.
+        """
+        import re
+
+        tekst = self.tekst or ""
+        ondertekening = self.ondertekening_html
+        if not ondertekening:
+            return tekst
+        # Witregels aan het eind eraf, anders komt er bij een tekst die al op
+        # lege regels eindigt een gat van vier regels boven de naam.
+        tekst = re.sub(r"(?i)(?:<br\s*/?>|\s)+$", "", tekst)
+        return f"{tekst}<br><br>{ondertekening}"
+
+    @property
+    def ondertekening_html(self):
+        """De naam eronder, in EVE-opmaak.
+
+        Met de kleuren van de gekozen auteur. Is er geen auteur gekozen, dan de
+        AA-gebruikersnaam in grijs — die is er altijd, maar hoeft niet op te
+        vallen.
+        """
+        if self.ondertekend_door:
+            return self.ondertekend_door.html
+        if self.auteur:
+            return f'<font color="#ff999999">{self.auteur.username}</font>'
+        return ""
+
+    @property
+    def is_verzonden(self):
+        return self.verzendingen.filter(gelukt=True).exists()
+
+    def gelukte_kanalen(self):
+        return sorted({v.get_kanaal_display()
+                       for v in self.verzendingen.filter(gelukt=True)})
+
+
+class Ontvanger(models.Model):
+    """Naar wie de EVE-mail gaat.
+
+    Los model en geen vast veld: één bericht mag naar meerdere adressen, en de
+    soorten die ESI kent (character, corporation, alliance, mailing_list) hebben
+    allemaal hun eigen id-ruimte.
+    """
+
+    # De keuzelijst staat bovenaan het bestand: StandaardOntvanger gebruikt 'm
+    # ook, en die staat hierboven.
+    Soort = Soort
+
+    bericht = models.ForeignKey(Bericht, on_delete=models.CASCADE,
+                                related_name="ontvangers")
+    soort = models.CharField(max_length=20, choices=Soort.choices,
+                             default=Soort.CORPORATION)
+    eve_id = models.BigIntegerField()
+    naam = models.CharField(max_length=255, blank=True,
+                            help_text=_("Alleen om te tonen; ESI werkt op id."))
+
+    class Meta:
+        unique_together = ("bericht", "soort", "eve_id")
+        verbose_name = _("ontvanger")
+        verbose_name_plural = _("ontvangers")
+
+    def __str__(self):
+        return self.naam or f"{self.get_soort_display()} #{self.eve_id}"
+
+
+class Verzending(models.Model):
+    """Wat er per kanaal gebeurd is, gelukt of niet.
+
+    Ook mislukte pogingen bewaren: anders sta je bij een 403 of een rate limit
+    met lege handen en weet je niet of het bericht half is aangekomen.
+    """
+
+    class Kanaal(models.TextChoices):
+        EVEMAIL = "evemail", _("EVE-mail")
+        DISCORD = "discord", _("Discord")
+
+    bericht = models.ForeignKey(Bericht, on_delete=models.CASCADE,
+                                related_name="verzendingen")
+    kanaal = models.CharField(max_length=20, choices=Kanaal.choices)
+    gelukt = models.BooleanField(default=False)
+    tijdstip = models.DateTimeField(auto_now_add=True)
+
+    # Bij EVE-mail: het character dat als afzender optrad. ESI kent geen
+    # corp-afzender — mail komt altijd van een character.
+    afzender = models.CharField(max_length=255, blank=True)
+    toelichting = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-tijdstip",)
+        verbose_name = _("verzending")
+        verbose_name_plural = _("verzendingen")
+
+    def __str__(self):
+        stand = "gelukt" if self.gelukt else "mislukt"
+        return f"{self.get_kanaal_display()} — {stand}"

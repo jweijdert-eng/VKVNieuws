@@ -1,0 +1,162 @@
+{% extends "vkvnieuws/base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block vkv_title %}{% if bericht %}{% translate "Bericht bewerken" %}{% else %}{% translate "Nieuw bericht" %}{% endif %}{% endblock %}
+{% block vkv_sub %}{% translate "Eén tekst, straks naar EVE-mail en Discord" %}{% endblock %}
+
+{% block vkv_inhoud %}
+    <form method="post" class="vkv-form">
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <div class="vkv-melding vkv-melding-error">
+                {% for veld, fouten in form.errors.items %}
+                    {% for f in fouten %}<div>{{ f }}</div>{% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <label class="vkv-label" for="{{ form.onderwerp.id_for_label }}">
+            {% translate "Onderwerp" %}</label>
+        {{ form.onderwerp }}
+
+        <label class="vkv-label" for="{{ form.tekst.id_for_label }}">
+            {% translate "Bericht" %}</label>
+
+        {% comment %}
+            Dezelfde knoppen als de mail in de game. De balk staat verborgen tot
+            editor.js hem aanzet: zonder JavaScript hou je het gewone tekstvak,
+            en dan werkt het formulier nog steeds.
+        {% endcomment %}
+        {% translate "Adres (https://… of showinfo:…)" as linkvraag %}
+        <div class="vkv-balk" id="vkv-balk" hidden
+             data-grens="{{ max_zichtbaar }}" data-linkvraag="{{ linkvraag }}">
+            <button type="button" class="vkv-balkknop" data-doe="bold"
+                    title="{% translate 'Vet' %}"><b>B</b></button>
+            <button type="button" class="vkv-balkknop" data-doe="underline"
+                    title="{% translate 'Onderstreept' %}"><u>U</u></button>
+            <button type="button" class="vkv-balkknop" data-doe="italic"
+                    title="{% translate 'Schuin' %}"><i>I</i></button>
+            <label class="vkv-balkknop vkv-kleurknop" title="{% translate 'Kleur' %}">
+                <input type="color" id="vkv-kleur" value="#ffffff">
+            </label>
+            <select id="vkv-grootte" class="vkv-balkkeuze" title="{% translate 'Lettergrootte' %}">
+                {% for g in groottes %}
+                    <option value="{{ g }}"{% if g == 14 %} selected{% endif %}>{{ g }}</option>
+                {% endfor %}
+            </select>
+            <span class="vkv-balkscheiding"></span>
+            <button type="button" class="vkv-balkknop" data-doe="link"
+                    title="{% translate 'Link toevoegen' %}">url</button>
+            <button type="button" class="vkv-balkknop" data-doe="geenlink"
+                    title="{% translate 'Link weghalen' %}">✂</button>
+            <span class="vkv-teller" id="vkv-teller">0/{{ max_zichtbaar }}</span>
+        </div>
+
+        {{ form.tekst }}
+        <div class="vkv-hint">
+            {% blocktranslate %}De opmaak die EVE-mail kent: vet, onderstreept, schuin, kleur, lettergrootte en links. Plakken gaat als platte tekst, zodat er geen opmaak van een website meekomt.{% endblocktranslate %}
+        </div>
+
+        <label class="vkv-keuze vkv-keuze-los">
+            {{ form.link_systemen }}
+            <span>
+                <b>{% translate "Systeemnamen klikbaar maken" %}</b>
+                <span class="vkv-dim">— {% blocktranslate %}namen als HB-5L3 worden in de mail een link naar het systeem. Alleen namen met een cijfer of streepje en de handelsknooppunten; anders zou een systeem dat "Cat" heet midden in een zin een link worden.{% endblocktranslate %}</span>
+            </span>
+        </label>
+
+        <label class="vkv-label" for="{{ form.ondertekend_door.id_for_label }}">
+            {% translate "Ondertekend door" %}</label>
+        {{ form.ondertekend_door }}
+        <div class="vkv-hint">
+            {% blocktranslate %}Beheer je de lijst in de admin, onder VKV Nieuws → auteurs.{% endblocktranslate %}
+        </div>
+
+        <h2 class="vkv-kop">{% translate "Ontvangers van de EVE-mail" %}</h2>
+
+        {% if form.vaste_ontvangers.field.queryset %}
+            <div class="vkv-vinkjes-lijst">
+                {% for keuze in form.vaste_ontvangers %}
+                    <label class="vkv-keuze">{{ keuze.tag }}<span>{{ keuze.choice_label }}</span></label>
+                {% endfor %}
+            </div>
+            <div class="vkv-hint vkv-hint-los">
+                {% blocktranslate %}Uit je adresboek. Beheren doe je in de admin, onder VKV Nieuws → vaste ontvangers.{% endblocktranslate %}
+            </div>
+        {% endif %}
+        {% comment %}
+            Hier hoort uitleg bij: dat mail niet ván de corp kan komen is de
+            meest verrassende beperking van deze API.
+        {% endcomment %}
+        <div class="vkv-hint vkv-hint-los">
+            {% blocktranslate %}Een mail aan een corporatie komt bij alle leden binnen. De afzender is altijd het gekoppelde character — EVE kent geen corp-afzender.{% endblocktranslate %}
+        </div>
+
+        {{ ontvangers.management_form }}
+        {% comment %}
+            Fouten in deze rijen werden nergens getoond: dan sloeg het bericht
+            wel op maar de ontvanger niet, zonder dat je zag waarom.
+        {% endcomment %}
+        {% if ontvangers.non_form_errors %}
+            <div class="vkv-melding vkv-melding-error">
+                {% for f in ontvangers.non_form_errors %}<div>{{ f }}</div>{% endfor %}
+            </div>
+        {% endif %}
+        {% for f in ontvangers %}
+            {% if f.errors %}
+                <div class="vkv-melding vkv-melding-error">
+                    {% for veld, fouten in f.errors.items %}
+                        {% for fout in fouten %}<div>{{ fout }}</div>{% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endfor %}
+        <div class="vkv-tablewrap">
+            <table class="vkv-table">
+                <thead>
+                    <tr>
+                        <th>{% translate "Soort" %}</th>
+                        <th>{% translate "Naam" %}</th>
+                        <th>{% translate "EVE-id" %}</th>
+                        <th>{% translate "Weg" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in ontvangers %}
+                        <tr>
+                            {{ f.id }}
+                            <td>{{ f.soort }}</td>
+                            <td>{{ f.naam }}</td>
+                            <td>{{ f.eve_id }}</td>
+                            <td class="vkv-midden">{{ f.DELETE }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if mailinglijsten %}
+            <div class="vkv-hint">
+                {% translate "Jouw mailinglijsten:" %}
+                {% for id, naam in mailinglijsten %}
+                    <b>{{ naam }}</b> ({{ id }}){% if not forloop.last %} · {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div class="vkv-hint">
+            {% blocktranslate %}Eén regel per ontvanger; opslaan geeft er weer een lege rij bij. Je hoeft maar één van de twee in te vullen: bij een naam zoekt de plugin het id erbij, bij een id de naam. Dan zie je meteen of het de juiste is. Alleen voor een mailinglijst is het id nodig.{% endblocktranslate %}
+        </div>
+
+        <div class="vkv-knoppenrij">
+            <button type="submit" class="vkv-knop vkv-knop-hoofd">
+                <i class="fas fa-save"></i> {% translate "Opslaan" %}</button>
+            <a href="{% if bericht %}{% url 'vkvnieuws:detail' bericht.pk %}{% else %}{% url 'vkvnieuws:index' %}{% endif %}"
+               class="vkv-knop">{% translate "Annuleren" %}</a>
+        </div>
+    </form>
+{% endblock %}
+
+{% block vkv_js %}
+    <script src="{% static 'vkvnieuws/editor.js' %}" defer></script>
+{% endblock %}

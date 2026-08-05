@@ -1,0 +1,284 @@
+/* Blog — zelfde EVE-dark palet als Character Info en Corp KillBoard. */
+.vkv-app {
+    --vkv-surface: #0f0f22;
+    --vkv-surface-2: #13132b;
+    --vkv-border: #1c1c35;
+    --vkv-text: #e1e4f0;
+    --vkv-dim: #8a90b0;
+    --vkv-gold: #f0c040;
+    --vkv-blue: #00b4d8;
+    --vkv-green: #3ecf6e;
+    --vkv-red: #e05555;
+
+    color: var(--vkv-text);
+}
+.vkv-app a { color: var(--vkv-blue); text-decoration: none; }
+.vkv-app a:hover { text-decoration: underline; }
+
+/* ── Kop ──────────────────────────────────────────────────────────────── */
+.vkv-app .vkv-hero {
+    display: flex; align-items: center; gap: .9rem;
+    padding: .8rem 1rem; border-radius: 10px; margin-bottom: 1rem;
+    background: linear-gradient(90deg, rgba(240, 192, 64, .10), var(--vkv-surface) 45%);
+    border: 1px solid var(--vkv-border);
+}
+/* Het embleem is al rond bijgesneden, dus hier geen extra masker nodig. */
+.vkv-app .vkv-hero-icon { width: 54px; height: 54px; flex: none; }
+.vkv-app .vkv-hero-tekst { flex: 1 1 auto; min-width: 0; }
+.vkv-app .vkv-hero-title {
+    font-size: 1.45rem; font-weight: 700; margin: 0 0 .15rem; line-height: 1.25;
+    color: var(--vkv-gold);
+}
+.vkv-app .vkv-hero-sub { font-size: .82rem; color: var(--vkv-dim); }
+
+/* Regel onder de titel: datum, ondertekening en ontvangers, met stipjes ertussen. */
+.vkv-app .vkv-meta { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; }
+/* Datum en tijd in het blauw van de huisstijl: 7,7:1 op deze achtergrond, dus
+   ruim leesbaar, en het bijt niet met het goud van de titel of het geel van de
+   auteur. Eén accent voor "wanneer", één voor "wie". */
+.vkv-app .vkv-meta-datum { text-transform: capitalize; color: var(--vkv-blue); }
+.vkv-app .vkv-meta-tijd {
+    font-variant-numeric: tabular-nums; font-weight: 600;
+    padding: .05rem .4rem; border-radius: 4px;
+    color: var(--vkv-blue); background: rgba(0, 180, 216, .14);
+}
+/* De ondertekening houdt de kleuren van de auteur, net als onder de mail. */
+.vkv-app .vkv-meta-auteur { font-weight: 600; }
+/* Ontvangers in het groen, dezelfde kleur als de ✓-vinkjes: die gaan allebei
+   over waar het bericht heen ging. 9,3:1 op deze achtergrond. */
+.vkv-app .vkv-meta-ontvangers {
+    font-weight: 600; padding: .05rem .4rem; border-radius: 999px;
+    color: var(--vkv-green); background: rgba(62, 207, 110, .14);
+}
+.vkv-app .vkv-punt { color: rgba(138, 144, 176, .5); }
+/* Donkeroranje pil met het getal in het goud, zoals het eerst was.
+   De vulling is 10% en niet 16%: bij 16% zakt het oranje woord op z'n eigen
+   achtergrond naar 4,4:1 en dat is onder de 4,5 die tekst van dit formaat nodig
+   heeft. Nu 4,7:1, en het goud staat er met 9,4:1 ruim bovenop. */
+.vkv-app .vkv-telling {
+    display: inline-flex; align-items: baseline; gap: .3rem;
+    padding: .08rem .5rem; border-radius: 999px;
+    color: #d2691e; background: rgba(210, 105, 30, .10);
+    font-variant-numeric: tabular-nums;
+}
+.vkv-app .vkv-telling b {
+    font-weight: 700; font-size: 1rem; color: var(--vkv-gold);
+}
+
+/* ── Meldingen ────────────────────────────────────────────────────────── */
+/* Geen var(--bs-tertiary-bg): die is in AA's donkere thema juist lichtgrijs,
+   en dan staat er witte tekst op een witte kaart. */
+.vkv-app .vkv-melding {
+    padding: .6rem .9rem; border-radius: 8px; margin-bottom: .75rem;
+    background: rgba(128, 128, 128, .14); border-left: 3px solid var(--vkv-dim);
+    font-size: .88rem;
+}
+.vkv-app .vkv-melding-success { border-left-color: var(--vkv-green); }
+.vkv-app .vkv-melding-warning { border-left-color: var(--vkv-gold); }
+.vkv-app .vkv-melding-error,
+.vkv-app .vkv-melding-danger { border-left-color: var(--vkv-red); }
+
+/* ── Berichtenlijst ───────────────────────────────────────────────────── */
+/* Kaarten in een raster: omslag boven, tekst eronder, en de voet altijd
+   onderaan zodat de knoppen op één lijn staan hoe lang de titels ook zijn. */
+.vkv-app .vkv-lijst {
+    display: grid; gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+}
+.vkv-app .vkv-kaart {
+    display: flex; flex-direction: column; overflow: hidden;
+    border-radius: 10px; color: var(--vkv-text);
+    background: var(--vkv-surface); border: 1px solid var(--vkv-border);
+    transition: transform .12s, border-color .12s;
+}
+.vkv-app .vkv-kaart:hover {
+    border-color: rgba(240, 192, 64, .45); text-decoration: none;
+    transform: translateY(-2px);
+}
+
+/* Omslag: het embleem op een verloop, in plaats van per bericht een plaatje
+   te genereren. Vaste verhouding, anders springen de kaarten uit het lood. */
+.vkv-app .vkv-omslag {
+    position: relative; aspect-ratio: 16 / 7;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 45%,
+                rgba(240, 192, 64, .16), transparent 62%), #0b0f16;
+    border-bottom: 1px solid rgba(240, 192, 64, .28);
+}
+.vkv-app .vkv-omslag img { width: 76px; height: 76px; }
+.vkv-app .vkv-omslag .vkv-vinkjes { position: absolute; top: .5rem; right: .5rem; }
+
+.vkv-app .vkv-kaart-body { padding: .85rem 1rem .6rem; flex: 1 1 auto; }
+/* Titel in het goud, net als op de berichtpagina zelf en op de omslag: dan is
+   het overal dezelfde huisstijl. 11:1 op deze achtergrond. */
+.vkv-app .vkv-kaart-body h2 {
+    font-size: .98rem; font-weight: 700; margin: 0 0 .2rem; line-height: 1.3;
+    color: var(--vkv-gold);
+}
+.vkv-app .vkv-datum {
+    font-size: .72rem; color: var(--vkv-blue); text-transform: capitalize;
+    margin-bottom: .45rem;
+}
+.vkv-app .vkv-fragment {
+    color: var(--vkv-dim); font-size: .82rem; line-height: 1.5; margin: 0;
+}
+
+.vkv-app .vkv-kaart-voet {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .5rem; padding: .6rem 1rem .85rem;
+}
+.vkv-app .vkv-lees { font-size: .8rem; font-weight: 600; color: var(--vkv-gold); }
+.vkv-app .vkv-merk {
+    font-size: .68rem; font-weight: 600; padding: .12rem .5rem; border-radius: 999px;
+    background: rgba(62, 207, 110, .14); color: var(--vkv-green);
+}
+
+.vkv-app .vkv-vinkjes { display: flex; gap: .3rem; flex: none; }
+.vkv-app .vkv-vinkje {
+    font-size: .66rem; font-weight: 600; padding: .1rem .4rem; border-radius: 999px;
+    background: rgba(62, 207, 110, .18); color: var(--vkv-green);
+}
+.vkv-app .vkv-vinkje.vkv-concept { background: rgba(128, 128, 128, .22); color: var(--vkv-dim); }
+
+.vkv-app .vkv-leeg {
+    text-align: center; padding: 2.5rem 1rem; color: var(--vkv-dim);
+    background: var(--vkv-surface); border: 1px solid var(--vkv-border); border-radius: 8px;
+}
+
+/* ── Bericht lezen ────────────────────────────────────────────────────── */
+.vkv-app .vkv-tekst {
+    padding: 1rem 1.2rem; border-radius: 8px; line-height: 1.6;
+    background: var(--vkv-surface); border: 1px solid var(--vkv-border);
+}
+.vkv-app .vkv-tekst p:last-child { margin-bottom: 0; }
+
+.vkv-app .vkv-kop {
+    font-size: .95rem; font-weight: 700; margin: 1.4rem 0 .6rem;
+    text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* ── Formulier ────────────────────────────────────────────────────────── */
+.vkv-app .vkv-label { display: block; font-size: .8rem; font-weight: 600; margin: .9rem 0 .3rem; }
+.vkv-app .vkv-label-klein { font-size: .74rem; color: var(--vkv-dim); }
+.vkv-app .vkv-invoer {
+    width: 100%; padding: .5rem .7rem; border-radius: 6px;
+    background: var(--vkv-surface); color: var(--vkv-text);
+    border: 1px solid var(--vkv-border); font-size: .9rem;
+}
+.vkv-app .vkv-invoer:focus { outline: 2px solid var(--vkv-blue); outline-offset: 1px; }
+.vkv-app .vkv-tekstvak { min-height: 16rem; line-height: 1.55; resize: vertical; }
+.vkv-app .vkv-smal { max-width: 22rem; }
+.vkv-app .vkv-hint { font-size: .76rem; color: var(--vkv-dim); margin-top: .3rem; }
+.vkv-app .vkv-hint-los { margin: 0 0 .6rem; }
+
+/* ── Verzendkeuzes ────────────────────────────────────────────────────── */
+.vkv-app .vkv-verzend {
+    padding: .9rem 1rem; border-radius: 8px;
+    background: var(--vkv-surface); border: 1px solid var(--vkv-border);
+}
+.vkv-app .vkv-keuze {
+    display: flex; align-items: baseline; gap: .55rem; padding: .4rem 0; cursor: pointer;
+}
+/* Uitgeschakeld mag zichtbaar blijven — je moet kunnen zien wát er uit staat. */
+.vkv-app .vkv-uit { opacity: .55; cursor: default; }
+.vkv-app .vkv-dim { color: var(--vkv-dim); }
+.vkv-app .vkv-waarschuwing { color: var(--vkv-gold); }
+.vkv-app .vkv-goed { color: var(--vkv-green); }
+.vkv-app .vkv-fout { color: var(--vkv-red); }
+.vkv-app .vkv-nowrap { white-space: nowrap; }
+.vkv-app .vkv-midden { text-align: center; }
+
+/* ── Knoppen ──────────────────────────────────────────────────────────── */
+.vkv-app .vkv-knoppenrij { display: flex; gap: .5rem; align-items: center; margin-top: 1rem; }
+.vkv-app .vkv-onderaan { margin-top: 1.6rem; }
+.vkv-app .vkv-verwijderform { margin: 0 0 0 auto; }
+.vkv-app .vkv-knop {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem .9rem; border-radius: 6px; font-size: .86rem; font-weight: 600;
+    background: rgba(128, 128, 128, .16); color: var(--vkv-text);
+    border: 1px solid var(--vkv-border); cursor: pointer;
+}
+.vkv-app .vkv-knop:hover { background: rgba(128, 128, 128, .24); text-decoration: none; }
+.vkv-app .vkv-knop-hoofd {
+    background: rgba(240, 192, 64, .18); color: var(--vkv-gold);
+    border-color: rgba(240, 192, 64, .45);
+}
+.vkv-app .vkv-knop-weg { color: var(--vkv-red); border-color: rgba(224, 85, 85, .4); }
+.vkv-app .vkv-knop[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ── Tabellen ─────────────────────────────────────────────────────────── */
+.vkv-app .vkv-tablewrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--vkv-border); }
+.vkv-app .vkv-table { width: 100%; border-collapse: collapse; background: var(--vkv-surface); }
+.vkv-app .vkv-table thead th {
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--vkv-dim);
+    font-weight: 600; text-align: left; padding: .5rem .8rem; white-space: nowrap;
+    border-bottom: 1px solid var(--vkv-border); background: var(--vkv-surface-2);
+}
+.vkv-app .vkv-table tbody tr { border-bottom: 1px solid var(--vkv-border); }
+.vkv-app .vkv-table tbody tr:last-child { border-bottom: 0; }
+.vkv-app .vkv-table td { padding: .45rem .8rem; vertical-align: middle; font-size: .84rem; }
+.vkv-app .vkv-table td .vkv-invoer { min-width: 8rem; }
+
+@media (max-width: 640px) {
+    .vkv-app .vkv-hero-icon { display: none; }
+    .vkv-app .vkv-knoppenrij { flex-wrap: wrap; }
+    .vkv-app .vkv-verwijderform { margin-left: 0; }
+}
+
+/* ── Opmaakbalk ───────────────────────────────────────────────────────── */
+/* Zelfde knoppen als de mail in de game: vet, onderstreept, kleur, grootte,
+   link en een tekenteller. */
+.vkv-app .vkv-balk {
+    display: flex; align-items: center; gap: .25rem; flex-wrap: wrap;
+    padding: .3rem .45rem; border: 1px solid var(--vkv-border);
+    border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--vkv-surface-2);
+}
+.vkv-app .vkv-balkknop {
+    min-width: 1.9rem; height: 1.9rem; padding: 0 .45rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--vkv-text);
+    border: 1px solid transparent; border-radius: 4px;
+    font-size: .85rem; cursor: pointer;
+}
+.vkv-app .vkv-balkknop:hover { background: rgba(128, 128, 128, .2); }
+.vkv-app .vkv-balkkeuze {
+    height: 1.9rem; padding: 0 .3rem; border-radius: 4px; font-size: .8rem;
+    background: var(--vkv-surface); color: var(--vkv-text);
+    border: 1px solid var(--vkv-border);
+}
+/* Het kleurvakje zelf is niet te stylen; we tonen het als vierkantje in de knop. */
+.vkv-app .vkv-kleurknop { padding: 0; overflow: hidden; }
+.vkv-app .vkv-kleurknop input[type="color"] {
+    width: 1.5rem; height: 1.5rem; padding: 0; border: 0; background: none; cursor: pointer;
+}
+.vkv-app .vkv-balkscheiding {
+    width: 1px; height: 1.2rem; background: var(--vkv-border); margin: 0 .25rem;
+}
+.vkv-app .vkv-teller {
+    margin-left: auto; font-size: .74rem; color: var(--vkv-dim);
+    font-variant-numeric: tabular-nums;
+}
+.vkv-app .vkv-teller.vkv-teveel { color: var(--vkv-red); font-weight: 700; }
+
+/* Het bewerkvlak hoort er hetzelfde uit te zien als het tekstvak dat het
+   vervangt, alleen zonder de bovenrand omdat de balk daar zit. */
+.vkv-app .vkv-bewerkvlak {
+    min-height: 16rem; line-height: 1.55; overflow-y: auto;
+    border-radius: 0 0 6px 6px; white-space: pre-wrap; word-wrap: break-word;
+}
+.vkv-app .vkv-bewerkvlak:empty::before {
+    content: attr(data-leeg); color: var(--vkv-dim);
+}
+.vkv-app .vkv-bewerkvlak a { pointer-events: none; }
+/* Losse keuze buiten het verzendblok, bv. het vinkje voor systeemlinks. */
+.vkv-app .vkv-keuze-los { align-items: flex-start; margin: 1rem 0 .2rem; }
+.vkv-app .vkv-keuze-los .vkv-dim { font-size: .78rem; }
+/* In-game links zijn geen webadressen; dat mag je zien. */
+.vkv-app .vkv-tekst a[href^="showinfo:"] {
+    color: var(--vkv-gold); border-bottom: 1px dotted currentColor; cursor: help;
+}
+/* Adresboek-vinkjes: naast elkaar in plaats van een lange kolom. */
+.vkv-app .vkv-vinkjes-lijst {
+    display: flex; flex-wrap: wrap; gap: .2rem 1.2rem; margin-bottom: .2rem;
+}
+.vkv-app .vkv-vinkjes-lijst .vkv-keuze { padding: .2rem 0; }

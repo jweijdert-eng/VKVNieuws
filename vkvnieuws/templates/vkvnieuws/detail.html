@@ -1,0 +1,122 @@
+{% extends "vkvnieuws/base.html" %}
+{% load i18n %}
+
+{% block vkv_title %}{{ bericht.onderwerp }}{% endblock %}
+{% block vkv_sub %}
+    <span class="vkv-meta">
+        <span class="vkv-meta-datum">{{ bericht.aangemaakt|date:"l j F Y" }}</span>
+        <span class="vkv-meta-tijd">{{ bericht.aangemaakt|date:"H:i" }}</span>
+        {% if bericht.ondertekening_web %}
+            <span class="vkv-punt">•</span>
+            <span class="vkv-meta-auteur">{{ bericht.ondertekening_web }}</span>
+        {% endif %}
+        {% if bericht.ontvangers.count %}
+            <span class="vkv-punt">•</span>
+            <span class="vkv-meta-ontvangers">{% blocktranslate count aantal=bericht.ontvangers.count %}{{ aantal }} ontvanger{% plural %}{{ aantal }} ontvangers{% endblocktranslate %}</span>
+        {% endif %}
+    </span>
+{% endblock %}
+
+{% block vkv_inhoud %}
+    {# Al opgeschoond bij het opslaan; alleen wat op de lijst staat kan hier zijn. #}
+    <article class="vkv-tekst">{{ bericht.html }}</article>
+
+    {% if perms.vkvnieuws.verzenden %}
+        <h2 class="vkv-kop">{% translate "Verzenden" %}</h2>
+        <form method="post" action="{% url 'vkvnieuws:verzenden' bericht.pk %}" class="vkv-verzend">
+            {% csrf_token %}
+
+            <label class="vkv-keuze {% if not kan_mailen %}vkv-uit{% endif %}">
+                <input type="checkbox" name="kanaal" value="evemail"
+                       {% if not kan_mailen %}disabled{% endif %} checked>
+                <span>
+                    <b>{% translate "EVE-mail" %}</b>
+                    {% if bericht.ontvangers.count %}
+                        <span class="vkv-dim">— {% for o in bericht.ontvangers.all %}{{ o }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+                    {% else %}
+                        <span class="vkv-waarschuwing">— {% translate "nog geen ontvangers" %}</span>
+                    {% endif %}
+                </span>
+            </label>
+
+            {% if afzenders %}
+                <label class="vkv-label vkv-label-klein" for="vkv-afzender">
+                    {% translate "Verstuurd door" %}</label>
+                <select name="afzender" id="vkv-afzender" class="vkv-invoer vkv-smal">
+                    {% for a in afzenders %}
+                        <option value="{{ a.id }}">{{ a.naam }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
+
+            <label class="vkv-keuze {% if not kan_discord %}vkv-uit{% endif %}">
+                <input type="checkbox" name="kanaal" value="discord"
+                       {% if not kan_discord %}disabled{% endif %} checked>
+                <span><b>{% translate "Discord" %}</b>
+                    {% if not kan_discord %}
+                        <span class="vkv-waarschuwing">— {% translate "geen webhook ingesteld" %}</span>
+                    {% endif %}
+                </span>
+            </label>
+
+            <div class="vkv-knoppenrij">
+                <button type="submit" class="vkv-knop vkv-knop-hoofd"
+                        {% if not kan_mailen and not kan_discord %}disabled{% endif %}>
+                    <i class="fas fa-paper-plane"></i> {% translate "Versturen" %}</button>
+                {% if perms.vkvnieuws.schrijven %}
+                    <a href="{% url 'vkvnieuws:bewerken' bericht.pk %}" class="vkv-knop">
+                        <i class="fas fa-pen"></i> {% translate "Bewerken" %}</a>
+                {% endif %}
+            </div>
+        </form>
+    {% endif %}
+
+    {% if bericht.verzendingen.all %}
+        <h2 class="vkv-kop">{% translate "Verzendgeschiedenis" %}</h2>
+        <div class="vkv-tablewrap">
+            <table class="vkv-table">
+                <thead>
+                    <tr>
+                        <th>{% translate "Wanneer" %}</th>
+                        <th>{% translate "Kanaal" %}</th>
+                        <th>{% translate "Resultaat" %}</th>
+                        <th>{% translate "Toelichting" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in bericht.verzendingen.all %}
+                        <tr>
+                            <td class="vkv-nowrap vkv-dim">{{ v.tijdstip|date:"d-m-Y H:i" }}</td>
+                            <td class="vkv-nowrap">{{ v.get_kanaal_display }}</td>
+                            <td class="vkv-nowrap {% if v.gelukt %}vkv-goed{% else %}vkv-fout{% endif %}">
+                                {% if v.gelukt %}✓ {% translate "gelukt" %}{% else %}✗ {% translate "mislukt" %}{% endif %}
+                            </td>
+                            <td class="vkv-dim">
+                                {% if v.afzender %}{{ v.afzender }} — {% endif %}{{ v.toelichting }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <div class="vkv-knoppenrij vkv-onderaan">
+        <a href="{% url 'vkvnieuws:index' %}" class="vkv-knop">← {% translate "Alle berichten" %}</a>
+        {% if perms.vkvnieuws.schrijven %}
+            {% comment %}
+                Verwijderen staat apart en onderaan, met een bevestiging: het is
+                het enige knopje hier waar je niets meer aan kunt doen.
+            {% endcomment %}
+            {# translate ... as: anders staat er een " in het attribuut en breekt het af. #}
+            {% translate "Dit bericht verwijderen? Dat kun je niet ongedaan maken." as vraag %}
+            <form method="post" action="{% url 'vkvnieuws:verwijderen' bericht.pk %}"
+                  class="vkv-verwijderform"
+                  onsubmit="return confirm('{{ vraag|escapejs }}')">
+                {% csrf_token %}
+                <button type="submit" class="vkv-knop vkv-knop-weg">
+                    <i class="fas fa-trash"></i> {% translate "Verwijderen" %}</button>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

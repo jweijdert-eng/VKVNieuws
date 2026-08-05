@@ -1,0 +1,51 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [
+    "hatchling",
+]
+
+[project]
+name = "aa-vkvnieuws"
+description = "VKV Nieuws voor Alliance Auth — schrijf één nieuwsbrief en stuur die naar EVE-mail en Discord."
+readme = "README.md"
+keywords = [
+    "allianceauth",
+    "vkvnieuws",
+    "discord",
+    "evemail",
+    "eveonline",
+]
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Dutch Legions" },
+]
+requires-python = ">=3.10,<3.15"
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+dynamic = [
+    "version",
+]
+dependencies = [
+    "allianceauth>=5",
+    "django-esi",
+    "requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/jweijdert-eng/VKVNieuws"
+
+[tool.hatch]
+version.path = "vkvnieuws/__init__.py"
+build.include = [
+    "/vkvnieuws",
+]

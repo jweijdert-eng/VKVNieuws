@@ -1,0 +1,64 @@
+{% extends "allianceauth/base-bs5.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block page_title %}{% translate "VKV Nieuws" %}{% endblock %}
+{% block header_nav_brand %}{% translate "VKV Nieuws" %}{% endblock header_nav_brand %}
+
+{# De stylesheet hoort in extra_css, niet in content: in <body> laadt hij pas na de eerste tekening. #}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'vkvnieuws/vkvnieuws.css' %}">
+{% endblock extra_css %}
+
+{% block content %}
+    <div class="vkv-app">
+        <div class="vkv-hero">
+            {# Het embleem in plaats van een icoontje; komt uit de instellingen of anders uit de plugin. #}
+            <img class="vkv-hero-icon" src="{{ logo_url }}" alt="">
+            {# vkv-hero-tekst groeit, zodat de knop rechts uitlijnt en niet tegen de titel plakt. #}
+            <div class="vkv-hero-tekst">
+                <h1 class="vkv-hero-title">{% block vkv_title %}{% translate "VKV Nieuws" %}{% endblock %}</h1>
+                <div class="vkv-hero-sub">{% block vkv_sub %}{% endblock %}</div>
+            </div>
+            {% if perms.vkvnieuws.schrijven %}
+                <a href="{% url 'vkvnieuws:nieuw' %}" class="vkv-knop vkv-knop-hoofd">
+                    <i class="fas fa-pen"></i> {% translate "Nieuw bericht" %}</a>
+            {% endif %}
+        </div>
+
+        {% if messages %}
+            {% for m in messages %}
+                <div class="vkv-melding vkv-melding-{{ m.tags }}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% comment %}
+            Waarschuwen vóórdat iemand op verzenden drukt, niet erna: zonder
+            token of webhook loopt het anders pas bij de poging vast.
+        {% endcomment %}
+        {% if perms.vkvnieuws.verzenden %}
+            {% if not kan_mailen %}
+                <div class="vkv-melding vkv-melding-warning">
+                    {% translate "Er is nog geen character gekoppeld dat EVE-mail mag versturen." %}
+                    <a href="{% url 'vkvnieuws:koppelen' %}">{% translate "Character koppelen" %}</a>
+                </div>
+            {% endif %}
+            {% if not kan_discord %}
+                <div class="vkv-melding vkv-melding-warning">
+                    {% translate "Discord staat uit: er is nog geen webhook ingevuld." %}
+                    {% if perms.vkvnieuws.change_instellingen %}
+                        <a href="{% url 'admin:vkvnieuws_instellingen_changelist' %}">{% translate "Instellen in de admin" %}</a>
+                    {% else %}
+                        {% blocktranslate %}Vraag een beheerder om hem in te vullen bij VKV Nieuws → instellingen.{% endblocktranslate %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% block vkv_inhoud %}{% endblock %}
+    </div>
+{% endblock %}
+
+{% block extra_javascript %}
+    {% block vkv_js %}{% endblock %}
+{% endblock extra_javascript %}

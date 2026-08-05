@@ -1,0 +1,43 @@
+name: Release
+
+# Draait bij het pushen van een tag als v1.0.0. Bouwt het wiel en hangt dat aan
+# een GitHub-release, zodat je 'm daarvandaan kunt installeren zonder PyPI.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Wiel bouwen
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Versie in de tag vergelijken met die in de code
+        # Anders staat er straks een release v1.2.0 met een wiel van 1.1.0 erin.
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          code=$(python -c "import re,pathlib; print(re.search(r'__version__ = \"([^\"]+)\"', pathlib.Path('vkvnieuws/__init__.py').read_text()).group(1))")
+          echo "tag: $tag, code: $code"
+          if [ "$tag" != "$code" ]; then
+            echo "::error::Tag $tag komt niet overeen met __version__ $code"
+            exit 1
+          fi
+
+      - name: Release aanmaken
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

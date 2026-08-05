@@ -1,0 +1,66 @@
+{% extends "vkvnieuws/base.html" %}
+{% load i18n %}
+
+{% block vkv_sub %}
+    <span class="vkv-meta">
+        <span class="vkv-telling">
+            <b>{{ berichten|length }}</b>
+            {% blocktranslate count aantal=berichten|length %}bericht{% plural %}berichten{% endblocktranslate %}
+        </span>
+        {% if verstuurd %}
+            <span class="vkv-meta-ontvangers">{{ verstuurd }} {% translate "verstuurd" %}</span>
+        {% endif %}
+    </span>
+{% endblock %}
+
+{% block vkv_inhoud %}
+    {% if not berichten %}
+        <div class="vkv-leeg">
+            <p>{% translate "Nog geen berichten." %}</p>
+            {% if perms.vkvnieuws.schrijven %}
+                <a href="{% url 'vkvnieuws:nieuw' %}" class="vkv-knop vkv-knop-hoofd">
+                    {% translate "Schrijf het eerste" %}</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="vkv-lijst">
+            {% for b in berichten %}
+                <a class="vkv-kaart" href="{% url 'vkvnieuws:detail' b.pk %}">
+                    {% comment %}
+                        Omslag in CSS in plaats van een gegenereerd plaatje: dat
+                        zou bij elke paginaweergave opnieuw getekend moeten
+                        worden. Let op: {# … #} werkt maar op één regel.
+                    {% endcomment %}
+                    <div class="vkv-omslag">
+                        <img src="{{ logo_url }}" alt="" loading="lazy">
+                        <div class="vkv-vinkjes">
+                            {% for k in b.gelukte_kanalen %}
+                                <span class="vkv-vinkje">✓ {{ k }}</span>
+                            {% empty %}
+                                <span class="vkv-vinkje vkv-concept">{% translate "concept" %}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="vkv-kaart-body">
+                        <h2>{{ b.onderwerp }}</h2>
+                        <div class="vkv-datum">{{ b.aangemaakt|date:"l j F Y" }}</div>
+                        {% comment %}
+                            inleiding en niet de ruwe tekst: die filtert de
+                            scheidingslijnen en kopjes eruit, anders staat er
+                            "═══ DE WEEK" middenin het fragment.
+                        {% endcomment %}
+                        <p class="vkv-fragment">{{ b.inleiding|truncatechars:150 }}</p>
+                    </div>
+
+                    <div class="vkv-kaart-voet">
+                        <span class="vkv-lees">{% translate "Lees verder" %} →</span>
+                        {% if b.ontvangers.count %}
+                            <span class="vkv-merk">{% blocktranslate count aantal=b.ontvangers.count %}{{ aantal }} ontvanger{% plural %}{{ aantal }} ontvangers{% endblocktranslate %}</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
