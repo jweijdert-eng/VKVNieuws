@@ -63,7 +63,15 @@
             {{ form.link_systemen }}
             <span>
                 <b>{% translate "Systeemnamen klikbaar maken" %}</b>
-                <span class="vkv-dim">— {% blocktranslate %}namen als HB-5L3 worden in de mail een link naar het systeem. Alleen namen met een cijfer of streepje en de handelsknooppunten; anders zou een systeem dat "Cat" heet midden in een zin een link worden.{% endblocktranslate %}</span>
+                <span class="vkv-dim">— {% blocktranslate %}namen als HB-5L3, Olettiers of Fountain worden in de mail een link naar het systeem of de region. Op 41 namen na, die ook gewone woorden zijn: anders zou "Van" aan het begin van elke zin oplichten.{% endblocktranslate %}</span>
+            </span>
+        </label>
+
+        <label class="vkv-keuze vkv-keuze-los">
+            {{ form.link_piloten }}
+            <span>
+                <b>{% translate "Pilotennamen klikbaar maken" %}</b>
+                <span class="vkv-dim">— {% blocktranslate %}namen uit de pilotenlijst worden een link naar het karakter. Die lijst vult zichzelf uit de ledenlijst van de corp; wie daarbuiten valt zet je erbij in de admin, onder VKV Nieuws → piloten.{% endblocktranslate %}</span>
             </span>
         </label>
 

@@ -1,4 +1,4 @@
-"""EVE-mail versturen — Blog.
+"""EVE-mail versturen — VKV Nieuws.
 
 Belangrijk om te weten: **ESI kent geen corp-afzender**. Een mail komt altijd
 van het character wiens token je gebruikt. Wat wél kan is een mail *naar* een
@@ -15,7 +15,7 @@ from vkvnieuws.models import MAX_BODY, MAX_ONDERWERP, MAX_ONTVANGERS
 logger = logging.getLogger(__name__)
 
 ESI = "https://esi.evetech.net/latest"
-UA = {"User-Agent": "aa-vkvrijdag (Alliance Auth plugin; maintainer: Dutch Legions)"}
+UA = {"User-Agent": "aa-vkvnieuws (Alliance Auth plugin; maintainer: Dutch Legions)"}
 
 SEND_SCOPE = "esi-mail.send_mail.v1"
 
@@ -129,6 +129,71 @@ def mailinglijsten(ids):
         for rij in rijen:
             uit[rij["mailing_list_id"]] = rij.get("name") or ""
     return sorted(uit.items(), key=lambda p: p[1].lower())
+
+
+LEDEN_SCOPE = "esi-corporations.read_corporation_membership.v1"
+
+
+def namen_bij_ids(ids):
+    """Character-ids -> namen. Publiek, 500 per keer."""
+    uit = {}
+    ids = list(ids)
+    for i in range(0, len(ids), 500):
+        try:
+            r = _session.post(f"{ESI}/universe/names/", headers=UA,
+                              params={"datasource": "tranquility"},
+                              json=ids[i:i + 500], timeout=30)
+            if r.status_code != 200:
+                continue
+            for rij in r.json() or []:
+                if (rij.get("category") or "").lower() == "character":
+                    uit[rij["id"]] = rij.get("name") or ""
+        except (requests.RequestException, ValueError):
+            continue
+    return uit
+
+
+def corp_leden():
+    """De volledige ledenlijst van elke corp waar we een token voor hebben.
+
+    Geeft {character_id: naam}. Vraagt in de game de rol **Director**; zonder die
+    rol antwoordt ESI met 403 en slaan we die corp gewoon over. Eén token per
+    corp is genoeg, dus zodra een corp gelukt is proberen we de rest niet meer —
+    dat scheelt een hoop vergeefse 403's.
+    """
+    try:
+        from allianceauth.eveonline.models import EveCharacter
+    except ImportError:
+        return {}
+
+    uit, gedaan = {}, set()
+    for cid, corp_id, corp in EveCharacter.objects.values_list(
+            "character_id", "corporation_id", "corporation_name"):
+        if not corp_id or corp_id in gedaan:
+            continue
+        token = token_voor(cid, LEDEN_SCOPE)
+        if not token:
+            continue
+        try:
+            r = _session.get(f"{ESI}/corporations/{corp_id}/members/",
+                             headers={**UA, "Authorization": f"Bearer {token}"},
+                             params={"datasource": "tranquility"}, timeout=30)
+        except requests.RequestException as fout:
+            logger.warning("ledenlijst %s: %s", corp, fout)
+            continue
+        if r.status_code == 403:
+            continue                    # geen Director; volgend token proberen
+        if r.status_code != 200:
+            logger.warning("ledenlijst %s: HTTP %s", corp, r.status_code)
+            continue
+        try:
+            leden = r.json() or []
+        except ValueError:
+            continue
+        gedaan.add(corp_id)
+        uit.update(namen_bij_ids(leden))
+        logger.info("ledenlijst %s: %s leden", corp, len(leden))
+    return uit
 
 
 def token_voor(character_id, scope):

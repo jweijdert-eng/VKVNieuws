@@ -1,0 +1,20 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% comment %}
+    Een knop naast "Piloot toevoegen" die de corp-ledenlijst binnenhaalt.
+    Als formulier en niet als link, want dit verandert gegevens — een GET
+    zou door elke prefetch van de browser afgevuurd kunnen worden.
+{% endcomment %}
+{% block object-tools-items %}
+    <li>
+        <form method="post" action="{% url 'admin:vkvnieuws_piloot_ophalen' %}"
+              style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="addlink" style="border:0;cursor:pointer;">
+                {% translate "Ledenlijst ophalen" %}
+            </button>
+        </form>
+    </li>
+    {{ block.super }}
+{% endblock %}

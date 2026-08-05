@@ -1,4 +1,4 @@
-"""Beheerscherm — Blog."""
+"""Beheerscherm — VKV Nieuws."""
 
 from django import forms
 from django.contrib import admin, messages
@@ -7,8 +7,8 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from vkvnieuws import discord, opmaak
-from vkvnieuws.models import (Auteur, Bericht, Instellingen, Ontvanger,
+from vkvnieuws import discord, esi, links, opmaak
+from vkvnieuws.models import (Auteur, Bericht, Instellingen, Ontvanger, Piloot,
                          StandaardOntvanger, Verzending)
 
 
@@ -58,6 +58,106 @@ class StandaardOntvangerAdmin(admin.ModelAdmin):
     list_editable = ("standaard",)
     list_filter = ("soort", "standaard")
     search_fields = ("naam", "eve_id")
+
+
+class PilootForm(forms.ModelForm):
+    """Naam intikken is genoeg; het id zoekt de plugin erbij."""
+
+    class Meta:
+        model = Piloot
+        fields = ("naam", "eve_id", "linken")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["eve_id"].required = False
+        self.fields["eve_id"].help_text = _(
+            "Laat leeg; die wordt bij de naam opgezocht.")
+
+    def clean(self):
+        gegevens = super().clean()
+        naam = (gegevens.get("naam") or "").strip()
+        if naam and not gegevens.get("eve_id"):
+            soort, pk = esi.zoek_op_naam(naam)
+            if soort != "character":
+                raise forms.ValidationError(
+                    _("EVE kent “%(naam)s” niet als character. Let op dat de "
+                      "naam exact klopt.") % {"naam": naam})
+            gegevens["eve_id"] = pk
+        return gegevens
+
+
+@admin.register(Piloot)
+class PilootAdmin(admin.ModelAdmin):
+    """Welke namen in een bericht een link naar het karakter worden.
+
+    Blind namen uit de tekst vissen kan niet: 60 gewone Nederlandse woorden uit
+    de eigen nieuwsbrieven blijken ook een bestaand character te zijn. Vandaar
+    een lijst — die zichzelf grotendeels vult.
+    """
+
+    form = PilootForm
+    change_list_template = "vkvnieuws/admin_piloten.html"
+    list_display = ("naam", "eve_id", "bron", "linken", "bijgewerkt")
+    list_editable = ("linken",)
+    list_filter = ("bron", "linken")
+    search_fields = ("naam", "eve_id")
+    actions = ("niet_linken", "wel_linken")
+
+    def get_readonly_fields(self, request, obj=None):
+        # Een opgehaalde piloot is geen plek om te typen: de volgende
+        # bijwerkronde zet 'm toch terug.
+        return ("bron",) if obj else ()
+
+    def get_urls(self):
+        from django.urls import path
+
+        return [path("ophalen/", self.admin_site.admin_view(self.ophalen),
+                     name="vkvnieuws_piloot_ophalen")] + super().get_urls()
+
+    def ophalen(self, request):
+        """De ledenlijst ophalen. Alleen op POST: dit verandert gegevens."""
+        from io import StringIO
+
+        from django.core.management import call_command
+        from django.http import HttpResponseNotAllowed
+        from django.shortcuts import redirect
+
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        if not self.has_add_permission(request):
+            self.message_user(request, _("Daar heb je geen recht op."),
+                              messages.ERROR)
+            return redirect("admin:vkvnieuws_piloot_changelist")
+
+        uit = StringIO()
+        try:
+            call_command("vkvnieuws_piloten", stdout=uit)
+        except Exception as fout:  # noqa: BLE001 — melden, niet omvallen
+            self.message_user(request, str(fout), messages.ERROR)
+        else:
+            links.vergeet_piloten()
+            self.message_user(request,
+                              uit.getvalue().strip().replace("\n", " · "),
+                              messages.SUCCESS)
+        return redirect("admin:vkvnieuws_piloot_changelist")
+
+    @admin.action(description=_("Niet automatisch linken"))
+    def niet_linken(self, request, queryset):
+        queryset.update(linken=False)
+        links.vergeet_piloten()
+
+    @admin.action(description=_("Wel automatisch linken"))
+    def wel_linken(self, request, queryset):
+        queryset.update(linken=True)
+        links.vergeet_piloten()
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        links.vergeet_piloten()
+
+    def delete_model(self, request, obj):
+        super().delete_model(request, obj)
+        links.vergeet_piloten()
 
 
 @admin.register(Bericht)

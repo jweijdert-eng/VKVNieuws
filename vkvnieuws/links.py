@@ -1,6 +1,6 @@
 """Links in de tekst — VKV Nieuws.
 
-Systeemnamen, regionamen en webadressen klikbaar maken.
+Systeemnamen, regionamen, webadressen en pilotennamen klikbaar maken.
 
 EVE-mail kent in-game links: `<a href="showinfo:5//30000142">Jita</a>` opent het
 infovenster van dat systeem, `showinfo:3//10000058` dat van een region. Type 5 is
@@ -64,8 +64,22 @@ ADRES = re.compile(
 # Leestekens aan het eind horen bij de zin, niet bij het adres.
 STAART = ".,;:!?)»\"'"
 
+# ── Piloten ──────────────────────────────────────────────────────────────
+# Het typenummer hoort bij de bloedlijn (1374 t/m 1386 komen alle voor), maar de
+# client trekt zich er niets van aan: in de inbox staat brandweer denhelder
+# (1831618559) in de ene mail als showinfo:1375 en in de andere als 1377. Het id
+# doet het werk, dus één vast nummer volstaat.
+PILOOT_TYPE = 1377
+
+# EVE zet zelf géén kleur om een pilotenlink (14 stuks in de inbox, allemaal
+# kaal). Deze is dus zelfgekozen: magenta ligt op ruime afstand van de amber van
+# systemen, het geel van adressen én de teal van gewone tekst, en haalt 7,1:1 op
+# de donkere mailachtergrond.
+PILOOTKLEUR = "#fff078d8"
+
 _enkel = None            # namen van één woord: naam -> (type, id)
 _meerwoord = None        # namen met spaties: één regex, langste eerst
+_piloten = None          # één regex over alle namen, langste eerst
 
 
 def _kaarten():
@@ -160,11 +174,66 @@ def _zet_adressen(tekst):
     return ADRES.sub(vervang, tekst)
 
 
-def link_adressen(html):
-    """Webadressen in de tekst klikbaar maken.
+def _pilotenkaart():
+    """De pilotenlijst als één regex, langste naam eerst.
 
-    Zelfde aanpak als bij de systeemnamen: tekst die al in een `<a>` staat blijft
-    met rust, anders krijg je een link in een link zodra je nog eens opslaat.
+    Langste eerst is nodig omdat `TheMarf` en `TheMarf03` allebei bestaan; zonder
+    die volgorde linkt de korte de eerste zeven letters van de lange weg.
+    """
+    global _piloten
+    if _piloten is not None:
+        return _piloten
+    from vkvnieuws.models import Piloot
+
+    rijen = list(Piloot.objects.filter(linken=True).values_list("naam", "eve_id"))
+    if not rijen:
+        _piloten = ()
+        return _piloten
+    rijen.sort(key=lambda r: -len(r[0]))
+    # Eigen randen in plaats van \b: namen bevatten apostrofs, streepjes en
+    # cijfers (MC'SAKE, General-suk-mai-diek, 5corpi0), en daar rekent \b anders
+    # mee dan je wilt.
+    #
+    # De apostrof telt bewust NIET als rand, anders valt "Rudy's grote QnA" af —
+    # en die bezitsvorm staat gewoon in de nieuwsbrief. Dat een naam als MC'SAKE
+    # daardoor niet halverwege wordt gepakt komt door de volgorde: de langste
+    # naam staat vooraan in de reeks en wint op dezelfde plek altijd.
+    patroon = re.compile(r"(?<![\w-])(" +
+                         "|".join(re.escape(n) for n, _ in rijen) +
+                         r")(?![\w-])")
+    _piloten = (patroon, dict(rijen))
+    return _piloten
+
+
+def vergeet_piloten():
+    """De opgebouwde regex weggooien; na het bijwerken van de lijst."""
+    global _piloten
+    _piloten = None
+
+
+def _zet_piloten(tekst):
+    kaart = _pilotenkaart()
+    if not kaart:
+        return tekst
+    patroon, ids = kaart
+    return patroon.sub(
+        lambda m: (f'<font color="{PILOOTKLEUR}">'
+                   f'<a href="showinfo:{PILOOT_TYPE}//{ids[m.group(1)]}">'
+                   f'{m.group(1)}</a></font>'),
+        tekst)
+
+
+def link_piloten(html):
+    """Namen uit de pilotenlijst omzetten naar een link naar het karakter."""
+    return _buiten_links(html, _zet_piloten)
+
+
+def _buiten_links(html, doe):
+    """`doe` op de tekst loslaten, maar niet op wat al in een `<a>` staat.
+
+    Zonder dit krijg je een link in een link zodra je een bericht een tweede keer
+    opslaat, en dat is precies wat de drie linkers hieronder gemeen hebben: ze
+    verschillen alleen in wát ze met een stuk tekst doen.
     """
     if not html:
         return ""
@@ -179,31 +248,18 @@ def link_adressen(html):
         elif in_link:
             uit.append(deel)
         else:
-            uit.append(_zet_adressen(deel))
+            uit.append(doe(deel))
     return "".join(uit)
+
+
+def link_adressen(html):
+    """Webadressen in de tekst klikbaar maken."""
+    return _buiten_links(html, _zet_adressen)
 
 
 def link_systemen(html):
-    """Systeem- en regionamen omzetten naar in-game links.
-
-    Tekst die al in een `<a>` staat blijft met rust: anders krijg je een link in
-    een link zodra je het bericht een tweede keer opslaat.
-    """
-    if not html:
-        return ""
-    uit, in_link = [], 0
-    for deel in TAG.split(html):
-        if deel.startswith("<") and deel.endswith(">"):
-            soort = deel[1:].lstrip("/").split(" ")[0].split(">")[0].lower()
-            if soort == "a":
-                in_link += -1 if deel.startswith("</") else 1
-                in_link = max(0, in_link)
-            uit.append(deel)
-        elif in_link:
-            uit.append(deel)
-        else:
-            uit.append(_zet_links(deel))
-    return "".join(uit)
+    """Systeem- en regionamen omzetten naar in-game links."""
+    return _buiten_links(html, _zet_links)
 
 
 # Ook de kleur eromheen weghalen, anders blijft er een losse <font> staan.
@@ -211,6 +267,20 @@ LOSHALEN = re.compile(
     r'(?i)(?:<font color="%s">)?<a href="showinfo:(?:%d|%d)//\d+">([^<]*)</a>(?:</font>)?'
     % (re.escape(LINKKLEUR), SYSTEEM_TYPE, REGION_TYPE))
 
+PILOOT_LOSHALEN = re.compile(
+    r'(?i)(?:<font color="%s">)?<a href="showinfo:1(?:37[3-9]|38[0-6])//\d+">'
+    r'([^<]*)</a>(?:</font>)?' % re.escape(PILOOTKLEUR))
+
+
 def haal_links_weg(html):
-    """De links er weer af, als je het vinkje uitzet."""
+    """De systeemlinks er weer af, als je het vinkje uitzet."""
     return LOSHALEN.sub(r"\1", html or "")
+
+
+def haal_piloten_weg(html):
+    """De pilotenlinks er weer af.
+
+    Alle bloedlijn-nummers eruit en niet alleen het onze: een naam die je uit de
+    game hebt gesleept komt binnen als 1384 of 1375, en die moet ook loskomen.
+    """
+    return PILOOT_LOSHALEN.sub(r"\1", html or "")

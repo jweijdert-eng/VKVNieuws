@@ -40,7 +40,8 @@ class BerichtForm(forms.ModelForm):
 
     class Meta:
         model = Bericht
-        fields = ("onderwerp", "tekst", "link_systemen", "ondertekend_door")
+        fields = ("onderwerp", "tekst", "link_systemen", "link_piloten",
+                  "ondertekend_door")
         widgets = {
             "onderwerp": forms.TextInput(attrs={
                 "class": "vkv-invoer", "maxlength": MAX_ONDERWERP,
@@ -62,6 +63,8 @@ class BerichtForm(forms.ModelForm):
             return gegevens
         tekst = (links.link_systemen(tekst) if gegevens.get("link_systemen")
                  else links.haal_links_weg(tekst))
+        tekst = (links.link_piloten(tekst) if gegevens.get("link_piloten")
+                 else links.haal_piloten_weg(tekst))
         # Webadressen altijd: een kaal adres in een mail is voor niemand handig,
         # en anders dan bij systeemnamen valt hier niets te gokken.
         gegevens["tekst"] = links.link_adressen(tekst)

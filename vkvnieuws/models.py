@@ -182,6 +182,47 @@ class StandaardOntvanger(models.Model):
         return f"{self.naam} ({self.get_soort_display()})"
 
 
+class Piloot(models.Model):
+    """Namen die in de tekst een link naar het karakter mogen worden.
+
+    **Waarom een lijst en niet gewoon opzoeken.** Namen uit de tekst vissen en
+    aan EVE vragen "kennen jullie die?" klinkt makkelijk maar loopt stuk: van de
+    927 losse woorden in vier nieuwsbrieven bleken er **60 ook een bestaand
+    character** — *Trein*, *Toen*, *Twee*, *Vrijdag*, *Week*, *Waar*, *Weg*.
+    Woordparen zijn niet veel beter: *Death clone*, *Cap Pilot*, *Sov Hub*,
+    *Titan Bridge* en zelfs *En de* bestaan allemaal als piloot. Zo zou de halve
+    nieuwsbrief oplichten.
+
+    Met een ledenlijst is er niets te raden: alleen namen die hier staan worden
+    gelinkt. De lijst vult zichzelf uit de corp-roster en uit de characters die
+    in Alliance Auth gekoppeld zijn (`vkvnieuws_piloten`); wie daarbuiten valt —
+    een FC van een andere alliantie — zet je er zelf bij.
+    """
+
+    class Bron(models.TextChoices):
+        CORP = "corp", _("Ledenlijst van de corp")
+        AUTH = "auth", _("Gekoppeld in Alliance Auth")
+        HAND = "hand", _("Zelf toegevoegd")
+
+    eve_id = models.BigIntegerField(unique=True, verbose_name=_("Character-id"))
+    naam = models.CharField(max_length=255, verbose_name=_("Naam"))
+    bron = models.CharField(max_length=10, choices=Bron.choices,
+                            default=Bron.HAND, verbose_name=_("Herkomst"))
+    linken = models.BooleanField(
+        default=True, verbose_name=_("Automatisch linken"),
+        help_text=_("Uitzetten voor een naam die ook een gewoon woord is; die "
+                    "zou anders midden in een zin oplichten."))
+    bijgewerkt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("naam",)
+        verbose_name = _("piloot")
+        verbose_name_plural = _("piloten")
+
+    def __str__(self):
+        return self.naam
+
+
 class Bericht(models.Model):
     """Een blogbericht."""
 
@@ -198,6 +239,10 @@ class Bericht(models.Model):
         default=True, verbose_name=_("Systeemnamen klikbaar maken"),
         help_text=_("Namen als HB-5L3 worden in de EVE-mail een link naar het "
                     "systeem."))
+    link_piloten = models.BooleanField(
+        default=True, verbose_name=_("Pilotennamen klikbaar maken"),
+        help_text=_("Namen uit de pilotenlijst worden een link naar het "
+                    "karakter."))
 
     # Twee verschillende dingen, dus ook twee verschillende labels: wie het in
     # Alliance Auth heeft ingetikt, en welke naam er onder de mail komt. Allebei

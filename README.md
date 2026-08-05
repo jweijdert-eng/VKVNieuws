@@ -140,6 +140,60 @@ De namen komen uit django-eveuniverse, dat de sterrenkaart lokaal heeft staan;
 er is geen ESI-call voor nodig. Reken op ongeveer 66 tekens per link van je
 8.000.
 
+## Pilotennamen klikbaar
+
+Schrijf `MC'SAKE` of `milly frensic` in je bericht en het wordt in de mail een
+link naar dat karakter, in magenta:
+
+```html
+<font color="#fff078d8"><a href="showinfo:1377//686304948">MC'SAKE</a></font>
+```
+
+Het typenummer hoort eigenlijk bij de bloedlijn (1374 t/m 1386 komen alle voor in
+echte mails), maar de client trekt zich er niets van aan: dezelfde piloot staat
+in de ene mail als `1375` en in de andere als `1377`. Het id doet het werk.
+
+De kleur is zelfgekozen — EVE zet er zelf geen omheen — en wel magenta omdat die
+op ruime afstand ligt van de amber van systemen, het geel van adressen én de teal
+van gewone tekst, met 7,1:1 contrast op de donkere mailachtergrond.
+
+### Waarom een lijst en niet gewoon opzoeken
+
+Omdat blind namen uit de tekst vissen niet werkt. Nagemeten op vier echte
+nieuwsbrieven:
+
+| Aanpak | Uitkomst |
+|---|---|
+| elk los woord aan EVE vragen | **60 gewone woorden zijn een bestaand character**: *Trein, Toen, Twee, Vrijdag, Week, Waar, Weg, Voor, Zelf…* |
+| elk woordpaar aan EVE vragen | 40 treffers, waarvan de meeste onzin: *Death clone, Cap Pilot, Sov Hub, Titan Bridge, En de, hou de* |
+
+Op hoofdletters varen helpt ook niet: er zijn piloten die `mentalbard`,
+`5corpi0` en `damaged television` heten.
+
+### Waar de lijst vandaan komt
+
+    python manage.py vkvnieuws_piloten
+
+of de knop **Ledenlijst ophalen** in de admin onder *VKV Nieuws → piloten*.
+
+1. **De corp-roster** via `/corporations/{id}/members/`. Vraagt in de game de rol
+   **Director**; zonder die rol antwoordt ESI met 403 en wordt die corp
+   overgeslagen. Eén token per corp is genoeg.
+2. **Alles wat Alliance Auth kent** (`EveCharacter`) — iedereen die een character
+   gekoppeld heeft, ook uit andere corps.
+3. **Wat je er zelf bij zet.** Een FC van een andere alliantie staat in geen van
+   beide lijsten; die tik je één keer in en dan linkt hij voortaan vanzelf. Je
+   vult alleen de naam in, het id zoekt de plugin erbij.
+
+Zelf toegevoegde piloten worden bij het bijwerken nooit overschreven.
+
+Op de 197 corpleden en vier echte nieuwsbrieven: **15 treffers, allemaal echte
+piloten, nul valse**. Heet iemand tóch net als een gewoon woord, zet dan
+*Automatisch linken* uit bij die ene naam.
+
+`Rudy's QnA` levert een link op `Rudy` en laat de `'s` staan; `TheMarf` en
+`TheMarf03` bestaan allebei en de langste wint.
+
 ## Webadressen klikbaar
 
 Altijd aan, en zonder vinkje: bij een systeemnaam valt te twisten of je *Van*
