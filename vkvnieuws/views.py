@@ -1,4 +1,4 @@
-"""Views — Blog."""
+"""Views — VKV Nieuws."""
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 
 from esi.decorators import token_required
 
-from vkvnieuws import discord, esi, opmaak, plaatje
+from vkvnieuws import discord, esi, links, opmaak, plaatje
 from vkvnieuws.forms import BerichtForm
 from vkvnieuws.models import (LETTERGROOTTES, MAX_ZICHTBAAR, Bericht, Ontvanger,
                          StandaardOntvanger, Verzending)
@@ -100,6 +100,14 @@ def schrijven(request: WSGIRequest, pk: int = None) -> HttpResponse:
                 nieuw.save()
                 _vaste_ontvangers(nieuw, form.cleaned_data.get("vaste_ontvangers"))
             messages.success(request, _("Bericht opgeslagen."))
+            # Waarschuwing en geen fout: het kan een afkorting zijn die toevallig
+            # op een systeemnaam lijkt. Alleen melden als er een échte naam is
+            # die er sterk op lijkt — dan is het bijna zeker een tikfout.
+            for naam, buren in links.verdachte_systemen(nieuw.tekst):
+                messages.warning(request, _(
+                    "“%(naam)s” bestaat niet als systeem en is dus niet gelinkt. "
+                    "Bedoelde je %(buren)s?")
+                    % {"naam": naam, "buren": " of ".join(buren)})
             return redirect("vkvnieuws:detail", pk=nieuw.pk)
     else:
         form = BerichtForm(instance=bericht)

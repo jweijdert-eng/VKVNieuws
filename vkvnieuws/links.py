@@ -273,6 +273,43 @@ PILOOT_LOSHALEN = re.compile(
     r'([^<]*)</a>(?:</font>)?' % re.escape(PILOOTKLEUR))
 
 
+# Iets dat eruitziet als een nullsec-systeem: hoofdletters/cijfers, een streepje,
+# en érgens een cijfer. Dat laatste sluit gewone woorden als "Non-CS" uit.
+LIJKT_SYSTEEM = re.compile(r"(?<![\w-])([A-Z0-9]{1,4}-[A-Z0-9]{1,5})(?![\w-])")
+
+
+def verdachte_systemen(html):
+    """Namen die op een systeem lijken maar er geen zijn — meestal een typefout.
+
+    Waarom dit bestaat: in een nieuwsbrief stond `SF-XSQ` terwijl het systeem
+    `SF-XJS` heet. De linker sloeg 'm over en niemand die het zag; pas toen alle
+    ándere namen wél een link kregen viel die ene op.
+
+    Alleen op de vorm afgaan werkt niet: `DL-SRP` en `Jita 4-4` zien er net zo
+    uit en zijn allebei goed. Daarom melden we er pas iets over als er een
+    échte systeemnaam bestaat die er sterk op lijkt — dan is het bijna zeker
+    een tikfout en geen afkorting.
+    """
+    import difflib
+
+    if not html:
+        return []
+    enkel, _ = _kaarten()
+    if not enkel:
+        return []
+    tekst = TAG.sub(" ", html)
+    bekend, gezien, uit = set(enkel), set(), []
+    for m in LIJKT_SYSTEEM.finditer(tekst):
+        naam = m.group(1)
+        if naam in bekend or naam in gezien:
+            continue
+        gezien.add(naam)
+        buren = difflib.get_close_matches(naam, bekend, n=3, cutoff=0.75)
+        if buren:
+            uit.append((naam, buren))
+    return uit
+
+
 def haal_links_weg(html):
     """De systeemlinks er weer af, als je het vinkje uitzet."""
     return LOSHALEN.sub(r"\1", html or "")

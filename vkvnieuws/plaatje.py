@@ -28,25 +28,41 @@ RAND = 28
 BASIS_GROOTTE = 15
 REGELAFSTAND = 1.45
 
-# Segoe UI op Windows, DejaVu op Linux. Pillow's eigen bitmapfont kan geen
-# formaten, dus zonder een van deze wordt het plaatje onleesbaar klein.
+# Eigen lettertypen, meegeleverd in vkvnieuws/fonts/. Daarmee werkt het plaatje
+# op elke server, ook eentje zonder fonts erop — en dat komt vaker voor dan je
+# denkt: een kale webhost had er geen enkele, waardoor het bericht wél wegging
+# maar zónder omslag (en dus zonder logo). DejaVu mag vrij meegeleverd worden,
+# zie fonts/LICENSE_DEJAVU.
+EIGEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+EIGEN_GEWOON = os.path.join(EIGEN, "DejaVuSans.ttf")
+EIGEN_VET = os.path.join(EIGEN, "DejaVuSans-Bold.ttf")
+
+# Een systeemfont wint als het er is — dan ziet het plaatje eruit zoals de rest
+# van die machine. Staat er niets, dan valt hij terug op wat we meesturen.
 FONTS = {
     "gewoon": ("C:/Windows/Fonts/segoeui.ttf",
                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-               "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+               "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+               EIGEN_GEWOON),
     "vet": ("C:/Windows/Fonts/segoeuib.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            EIGEN_VET),
+    # Cursief sturen we niet mee: dat scheelt 600 KB in het pakket en op een
+    # omslagkaart valt schuinschrift-dat-recht-staat niemand op.
     "cursief": ("C:/Windows/Fonts/segoeuii.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"),
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf",
+                EIGEN_GEWOON),
     # Voor de scheidingslijnen. Segoe UI kent U+2550 (dubbele streep) NIET en
     # tekent er blokjes voor; nagemeten door het teken te renderen en te
     # vergelijken met een teken dat zeker niet bestaat. Consolas en DejaVu Mono
     # hebben het wel, en monospace sluit ook netjes aan tot één doorlopende lijn.
+    # DejaVu Sans kent het teken ook, dus als terugval volstaat dat.
     "lijn": ("C:/Windows/Fonts/consola.ttf",
              "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-             "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf"),
+             "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+             EIGEN_GEWOON),
 }
 
 # De tekens waarmee mensen een scheidingslijn tikken.
