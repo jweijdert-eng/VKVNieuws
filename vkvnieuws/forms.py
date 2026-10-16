@@ -52,19 +52,25 @@ class BerichtForm(forms.ModelForm):
         }
 
     def clean(self):
-        """Systeemlinks pas hier, want beide velden moeten bekend zijn.
+        """Links pas hier, want beide velden moeten bekend zijn.
 
         Ook weer weghalen als het vinkje uitgaat: anders blijven links staan die
-        je net hebt uitgezet.
+        je net hebt uitgezet. Pilootnamen gaan vóór systeemnamen: een character
+        kan dezelfde naam hebben als een systeem.
         """
         gegevens = super().clean()
         tekst = gegevens.get("tekst")
         if tekst is None:
             return gegevens
+        if gegevens.get("link_piloten"):
+            # Haal eventueel al opgeslagen systeemlinks eerst weg, zodat ook
+            # bestaande berichten de volledige pilotenaam kunnen matchen.
+            tekst = links.haal_links_weg(tekst)
+            tekst = links.link_piloten(tekst)
+        else:
+            tekst = links.haal_piloten_weg(tekst)
         tekst = (links.link_systemen(tekst) if gegevens.get("link_systemen")
                  else links.haal_links_weg(tekst))
-        tekst = (links.link_piloten(tekst) if gegevens.get("link_piloten")
-                 else links.haal_piloten_weg(tekst))
         # Webadressen altijd: een kaal adres in een mail is voor niemand handig,
         # en anders dan bij systeemnamen valt hier niets te gokken.
         gegevens["tekst"] = links.link_adressen(tekst)
@@ -179,5 +185,4 @@ class OntvangerForm(forms.ModelForm):
         gegevens["soort"] = gevonden_soort
         gegevens["eve_id"] = gevonden_id
         return gegevens
-
 
